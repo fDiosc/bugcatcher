@@ -6,9 +6,13 @@ import StatusDropdown from './StatusDropdown';
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
+    const user = await db.users.get();
 
-    const report = await db.reports.findUnique({
-        where: { id }
+    if (!user) notFound();
+
+    const report = await db.reports.findUniqueWithOwnership({
+        id,
+        ownerId: user.id
     });
 
     if (!report) notFound();

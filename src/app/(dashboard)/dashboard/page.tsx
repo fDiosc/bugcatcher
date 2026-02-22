@@ -2,7 +2,8 @@ import { db } from '@/lib/db';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
-    const projects = await db.projects.findMany();
+    const user = await db.users.get();
+    const projects = await db.projects.findMany(user?.id);
 
     if (projects.length === 0) {
         return (

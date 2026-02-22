@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db, PLAN_LIMITS } from '@/lib/db';
+import { db, prisma, PLAN_LIMITS } from '@/lib/db';
 import { generateBugTriage } from '@/lib/ai';
-
-// Hack to access raw data for counting since findMany on reports isn't implemented
-function getDb() {
-    return require('fs').existsSync(process.cwd() + '/db.json')
-        ? JSON.parse(require('fs').readFileSync(process.cwd() + '/db.json', 'utf8'))
-        : { reports: [] };
-}
 
 export async function POST(req: Request) {
     try {
@@ -31,19 +24,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid projectKey' }, { status: 404 });
         }
 
-        const user = db.users.get();
-        const limits = PLAN_LIMITS[user.plan];
+        const owner = await prisma.user.findUnique({ where: { id: project.ownerId } });
+        if (!owner) {
+            return NextResponse.json({ error: 'Project owner not found' }, { status: 404 });
+        }
+        const limits = PLAN_LIMITS[owner.plan as keyof typeof PLAN_LIMITS];
 
         // 1. Quota Check
-        // MVP: simplified to total reports across all user projects.
-        // Real-world: Should check current month exactly.
         const allUserProjectIds = (await db.projects.findMany())
             .filter(p => p.ownerId === user.id)
             .map(p => p.id);
 
-        // Mocking db.reports.count behavior for MVP
-        const allReports = getDb().reports;
-        const currentReportsCount = allReports.filter(r => allUserProjectIds.includes(r.projectId)).length;
+        const currentReportsCount = await prisma.report.count({
+            where: { projectId: { in: allUserProjectIds } }
+        });
 
         if (currentReportsCount >= limits.reportsPerMonth) {
             return NextResponse.json({
@@ -97,7 +91,7 @@ export async function POST(req: Request) {
                     userAgent,
                     timestamp: timestamp || new Date().toISOString(),
                     events: recordingEvents || [],
-                    screenshots: assetPaths || [], // ai.ts will need updating to handle paths next, passing for now
+                    screenshots: assetPaths || [],
                     consoleErrors,
                     networkLog,
                     jsErrors,
@@ -130,7 +124,6 @@ export async function POST(req: Request) {
                                 reporter: userAgent
                             })
                         });
-                        console.log(`BugCatcher: Webhook fired to ${project.webhookUrl}`);
                     } catch (whError) {
                         console.warn('BugCatcher: Failed to fire webhook', whError);
                     }
@@ -148,7 +141,6 @@ export async function POST(req: Request) {
     }
 }
 
-// Handle CORS for the widget
 export async function OPTIONS() {
     return new NextResponse(null, {
         status: 204,

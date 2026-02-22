@@ -1,24 +1,31 @@
 import Link from 'next/link';
-import { db, PLAN_LIMITS } from '@/lib/db';
+import { redirect } from 'next/navigation';
+import { db, prisma, PLAN_LIMITS } from '@/lib/db';
+import LogoutButton from '@/components/LogoutButton';
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const user = db.users.get();
-    const limits = PLAN_LIMITS[user.plan];
+    const user = await db.users.get();
+
+    if (!user) {
+        redirect('/login');
+    }
+
+    const limits = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS];
+    // ...
 
     // Compute current usage
-    const allUserProjects = (await db.projects.findMany()).filter(p => p.ownerId === user.id);
+    const allUserProjects = await db.projects.findMany(user.id);
     const projectsCount = allUserProjects.length;
 
-    // Note: Since db.reports.findMany isn't fully mocked, we use the raw length hack for MVP
-    const fs = require('fs');
-    const dbPath = process.cwd() + '/db.json';
-    const rawDb = fs.existsSync(dbPath) ? JSON.parse(fs.readFileSync(dbPath, 'utf8')) : { reports: [] };
-    const allUserProjectIds = allUserProjects.map(p => p.id);
-    const reportsCount = rawDb.reports.filter((r: any) => allUserProjectIds.includes(r.projectId)).length;
+    // Official Prisma count for reports
+    const allUserProjectIds = allUserProjects.map((p: any) => p.id);
+    const reportsCount = await prisma.report.count({
+        where: { projectId: { in: allUserProjectIds } }
+    });
 
     const reportsPercentage = Math.min(100, Math.round((reportsCount / limits.reportsPerMonth) * 100));
     const isCloseToLimit = reportsPercentage >= 80;
@@ -57,12 +64,15 @@ export default async function DashboardLayout({
                         )}
                     </div>
 
-                    <div className="flex items-center gap-3 p-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">{user.name.charAt(0)}</div>
-                        <div className="text-sm">
-                            <p className="font-semibold text-slate-900 truncate w-32">{user.name}</p>
-                            <p className="text-slate-500 text-xs truncate w-32">{user.email}</p>
+                    <div className="flex items-center justify-between p-3 group">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">{user.name?.charAt(0) || 'U'}</div>
+                            <div className="text-sm">
+                                <p className="font-semibold text-slate-900 truncate w-32">{user.name}</p>
+                                <p className="text-slate-500 text-xs truncate w-32">{user.email}</p>
+                            </div>
                         </div>
+                        <LogoutButton />
                     </div>
                 </div>
             </aside>

@@ -27,6 +27,7 @@ model Project {
   owner            User     @relation(fields: [ownerId], references: [id])
   reports          Report[]
   mode             String   @default("CLIENT") // DEV, CLIENT, DUAL
+  language         String   @default("en")
   webhookUrl       String?
   captureConfig    Json?
   createdAt        DateTime @default(now())
@@ -45,6 +46,9 @@ model Report {
   reproductionSteps String?  @db.Text
   severity          String?  @default("MEDIUM")
   status            String   @default("OPEN") // OPEN, IN_PROGRESS, FIXED
+  events            Json?
+  screenshots       String[]
+  replayInsights    String?  @db.Text
   metadata          Json?
   consoleErrors     Json?
   networkLog        Json?

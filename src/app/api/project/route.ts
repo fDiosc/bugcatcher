@@ -25,8 +25,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404, headers: corsHeaders });
     }
 
-    const user = db.users.get(); // MVP logic simulates single user system
-    const planLimits = PLAN_LIMITS[user.plan];
+    const owner = await prisma.user.findUnique({ where: { id: project.ownerId } });
+    if (!owner) {
+        return NextResponse.json({ error: 'Project owner not found' }, { status: 404, headers: corsHeaders });
+    }
+    const planLimits = PLAN_LIMITS[owner.plan as keyof typeof PLAN_LIMITS];
     const finalMode = planLimits.devModeAllowed ? project.mode : 'CLIENT';
 
     return NextResponse.json({

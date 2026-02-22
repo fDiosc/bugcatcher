@@ -36,6 +36,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# testing
+/test-results/
+/tests-out/
+playwright-report/
+blob-report/
+
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

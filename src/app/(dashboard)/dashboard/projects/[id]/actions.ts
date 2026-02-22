@@ -5,6 +5,16 @@ import { revalidatePath } from 'next/cache';
 
 export async function changeProjectMode(projectId: string, newMode: string) {
     try {
+        const user = await db.users.get();
+        if (!user) return { success: false, error: 'Unauthorized' };
+
+        const project = await db.projects.findUnique({
+            where: { id: projectId },
+            ownerId: user.id
+        });
+
+        if (!project) return { success: false, error: 'Project not found' };
+
         await db.projects.update({
             where: { id: projectId },
             data: { mode: newMode }

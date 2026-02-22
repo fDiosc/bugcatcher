@@ -10,7 +10,7 @@ export default function NewProjectPage() {
         const clarityProjectId = formData.get('clarityProjectId') as string;
         const webhookUrl = formData.get('webhookUrl') as string;
 
-        const user = db.users.get();
+        const user = await db.users.get();
         const currentProjects = (await db.projects.findMany()).filter(p => p.ownerId === user.id);
         const limit = PLAN_LIMITS[user.plan].projects;
 
