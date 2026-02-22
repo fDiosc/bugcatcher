@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  role      String    @default("USER")
+  plan      String    @default("FREE")
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Project {
+  id               String   @id @default(cuid())
+  name             String
+  apiKey           String   @unique @default(cuid())
+  clarityProjectId String?
+  ownerId          String
+  owner            User     @relation(fields: [ownerId], references: [id])
+  reports          Report[]
+  mode             String   @default("CLIENT") // DEV, CLIENT, DUAL
+  webhookUrl       String?
+  captureConfig    Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Report {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id])
+  claritySessionUrl String?
+  pageUrl           String
+  userAgent         String
+  description       String?
+  aiSummary         String?  @db.Text
+  reproductionSteps String?  @db.Text
+  severity          String?  @default("MEDIUM")
+  status            String   @default("OPEN") // OPEN, IN_PROGRESS, FIXED
+  metadata          Json?
+  consoleErrors     Json?
+  networkLog        Json?
+  performanceMetrics Json?
+  rootCause         String?  @db.Text
+  suggestedFix      String?  @db.Text
+  devTimeEstimate   String? // LOW, MEDIUM, HIGH
+  isRecurring       Boolean  @default(false)
+  relatedBugIds     String[]
+  assetPaths        String[]
+  mode              String   @default("CLIENT") // DEV, CLIENT
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

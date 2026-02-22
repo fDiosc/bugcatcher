@@ -8,8 +8,14 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "dependencies": {
+    "@bugcatcher/react": "file:packages/react",
+    "@prisma/client": "^6.19.2",
     "next": "16.1.6",
+    "openai": "^6.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -20,7 +26,13 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "description": "O **BugCatcher** é uma plataforma inovadora de report de bugs hiper-contextualizados, projetada tanto para desenvolvedores (\"Dev Mode\") quanto para usuários leigos (\"Client Mode\"). Diferente dos sistemas tradicionais que apenas capturam um formulário ou uma foto estática, o BugCatcher grava silenciosamente os **segundos finais antes do erro**, capturando a tela, logs de rede, console e até mesmo o estado global da aplicação.",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

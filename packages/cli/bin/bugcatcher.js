@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+
+const inquirer = require('inquirer').default || require('inquirer');
+const fs = require('fs');
+const path = require('path');
+
+async function main() {
+    console.log('\x1b[34m%s\x1b[0m', '\nWelcome to BugCatcher! 🐛\n');
+
+    const { apiKey } = await inquirer.prompt([
+        {
+            type: 'input',
+            name: 'apiKey',
+            message: 'Enter your BugCatcher API Key (e.g. bc_12345):',
+            validate: input => input.length > 5 ? true : 'Please enter a valid API Key',
+        }
+    ]);
+
+    console.log('\nScanning project...');
+
+    // Very simplified heuristics to find a Next.js App Router root layout
+    const possiblePaths = [
+        path.join(process.cwd(), 'src', 'app', 'layout.tsx'),
+        path.join(process.cwd(), 'app', 'layout.tsx'),
+        path.join(process.cwd(), 'src', 'app', 'layout.jsx'),
+    ];
+
+    let targetPath = null;
+    for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+            targetPath = p;
+            break;
+        }
+    }
+
+    if (!targetPath) {
+        console.log('\x1b[33m%s\x1b[0m', '\nCould not automatically find a Next.js App Router layout file.');
+        console.log(`Please install the package manually:\n`);
+        console.log('\x1b[36m%s\x1b[0m', `1. npm install @bugcatcher/react`);
+        console.log('\x1b[36m%s\x1b[0m', `2. Add <BugCatcherWidget apiKey="${apiKey}" /> to your layout.\n`);
+        process.exit(0);
+    }
+
+    console.log(`Found Next.js layout at ${path.relative(process.cwd(), targetPath)}`);
+
+    let content = fs.readFileSync(targetPath, 'utf8');
+
+    // Check if it's already installed
+    if (content.includes('BugCatcherWidget')) {
+        console.log('\x1b[33m%s\x1b[0m', '\nBugCatcher is already installed in your layout! Updating API Key...');
+
+        // Replace the existing API key
+        content = content.replace(/apiKey="[^"]*"/, `apiKey="${apiKey}"`);
+        fs.writeFileSync(targetPath, content);
+
+        console.log('\x1b[32m%s\x1b[0m', `\n✅ Successfully updated your BugCatcher API Key to ${apiKey}!`);
+        console.log(`Run your app and start capturing bugs magically.\n`);
+        process.exit(0);
+    }
+
+    // Attempt to inject import and component 
+    // (A real CLI would use AST like babel/ts-morph, but regex/string manipulation is okay for MVP simulation)
+
+    // 1. Add import statement
+    content = `import { BugCatcherWidget } from '@bugcatcher/react';\n` + content;
+
+    // 2. Add component inside body
+    content = content.replace(/(<body[^>]*>)/i, `$1\n        <BugCatcherWidget apiKey="${apiKey}" />`);
+
+    fs.writeFileSync(targetPath, content);
+
+    console.log('\x1b[32m%s\x1b[0m', `\n✅ Successfully injected BugCatcher into your app!`);
+    console.log(`Run your app and start capturing bugs magically.\n`);
+}
+
+main().catch(console.error);

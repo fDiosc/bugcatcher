@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BugCatcher v2.0 🐞
 
-## Getting Started
+O **BugCatcher** é uma plataforma inovadora de report de bugs hiper-contextualizados, projetada tanto para desenvolvedores ("Dev Mode") quanto para usuários leigos ("Client Mode"). Diferente dos sistemas tradicionais que apenas capturam um formulário ou uma foto estática, o BugCatcher grava silenciosamente os **segundos finais antes do erro**, capturando a tela, logs de rede, console e até mesmo o estado global da aplicação.
 
-First, run the development server:
+Atualmente, o projeto está na versão **Local MVP (Vibe Coder Edition)**, operando com infraestrutura 100% local (sem dependência imediata de bancos SQL serverless ou buckets S3 web), focando na agilidade e testabilidade completa em ambiente de desenvolvimento.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏗 Arquitetura e Estrutura do Projeto
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O projeto é construído em cima de uma stack moderna e robusta, priorizando performance e integrações com IA:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework Core:** Next.js (App Router) + React
+- **Linguagem:** TypeScript (Backend & Dashboard) / JavaScript Vanilla (Widget Client-Side)
+- **Estilização:** Tailwind CSS (Dashboard UI)
+- **Banco de Dados Local:** Arquivo JSON persistente (`src/lib/db.json` & `db.ts`) simulando uma interface Prisma.
+- **Armazenamento de Imagens Local:** As capturas da Timeline são salvas no disco físico (`public/uploads`) via API dedicada.
+- **Motor de Replay DOM:** `rrweb` (Geração de snapshot contínuo do DOM para Replay Nativo)
+- **Motor Visual (Timeline):** `html2canvas-pro` (Captura visual de telas em alta fidelidade com suporte a CSS Nível 4, ex: `oklch`, `lab`).
+- **Cérebro de IA:** Integração com a API da OpenAI (`gpt-4o` com Vision) executando triage automático em background.
 
-## Learn More
+### Organização de Pastas (Highlights)
+- `/public/widget.js`: O núcleo client-side. O script que é injetado nas aplicações alvo. Ele escuta cliques, faz os recortes visuais, captura exceptions e intercepta o console/rede.
+- `/public/uploads/`: Diretório que atua como o \`S3 bucket\` local. Guarda as capturas de tela geradas durante o reporte.
+- `/src/lib/db.ts`: Engine customizada para interagir com o `db.json`, padronizando as chamadas de banco de dados e preparando para uma eventual migração para PostgreSQL Prisma.
+- `/src/lib/ai.ts`: Serviço que consome a telemetria bruta e as imagens do BugCatcher e formata um prompt gigantesco para o `GPT-4o` gerar diagnóstico (Root Cause, Fix, Steps to Reproduce).
+- `/src/app/api/report/route.ts`: Endpoint principal que recebe o payload massivo do `widget.js`, salva no banco e dispara o processamento de IA em background.
+- `/src/app/api/upload/route.ts`: Endpoint que recebe strings Base64 do widget e as converte em arquivos JPEG reais no disco para economia de tráfego no payload principal.
+- `/src/app/(dashboard)/`: Interface administrativa completa do Backoffice onde os relatórios são visualizados em ricos painéis e timelines interativas.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🚀 Funcionalidades Principais
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. The "Widget" (Captura Silenciosa e Event-Driven)
+O `widget.js` é uma obra de engenharia isolada que roda no navegador do usuário.
+- **Visual Capture Event-Driven:** O widget **tira uma foto 1:1 de altíssima qualidade da tela toda vez que o usuário clica**. Através do processo de `onclone`, o widget injeta uma "mira vermelha" escondida do usuário, mas visível na captura, apontando exatamente o alvo do clique `(X, Y)`.
+- **Buffer Contínuo:** Ele gera pequenos clipes stop-motion da sua UI (armazenando no máximo de 5 a 10 ultimas fotos) e varre a sujeira periodicamente de forma leve usando `sessionStorage`.
+- **Telemetria de Baixo Nível:** Intercepta `fetch`, `XMLHttpRequest` (pegando tempos, erros e status 404+), `console.error/warn/log` e Erros não-tratados (Exceptions), montando uma caixa-preta perfeita.
 
-## Deploy on Vercel
+### 2. Backoffice Dashboard
+O Dashboard processa e exibe a "explosão" de dados vindos do widget em três pilares analíticos:
+- **AI Triage Insights:** Uma análise automatizada com inteligência artificial, informando a possível "causa raiz", o código sugerido para "resolução", a gravidade e o tempo de desenvolvimento estimado. Ele também conta com uma "narrativa do usuário", explicando passo a passo o que a IA está vendo as imagens da Timeline.
+- **Timeline e Replay Visual:** Uma tira em "Stop-Motion" contendo os frames dos cliques cruciais (com os alvos vermelhos nativos), bem como o **Replay Nativo do rrweb** para assistir a renderização em fita K7 exata do DOM.
+- **Raw Telemetry Logs:** Abas exclusivas para explorar console logs empilhados com trace, requisições de rede falhas e estado da aplicação (`window.BugCatcherStateGetter`).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Integrações Smart
+- **Clarity Tracker:** Coleta a sessão do Microsoft Clarity via cookie e faz o append inteligente do link direto do vídeo do replay da tela na dashboard.
+- **Suporte a Dev/Client Mode:** No modo desenvolvedor (`data-dev-mode="true"`), o widget entrega uma payload bruta violenta com toda a rede interceptada, JS Error Catch e seletor de severidade. No `client_mode`, foca-se em coletar os recursos visuais brutos e ocultar formulários técnicos da visão do QA/User final.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🛠 Como Rodar (Ambiente Dev)
+
+1. Garanta que você colocou a chave da OpenAI (`OPENAI_API_KEY`) no arquivo `.env`.
+2. Rode o servidor Next.js localmente:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+3. Acesse `http://localhost:3000` para ver os botões de simulação e erro na home.
+4. Para testar o dashboard, entre em `http://localhost:3000/dashboard`.
+5. Acione o widget na tela com **Ctrl+Shift+B** (ou clique no botão redondo do canto inferior direito).
+
+---
+
+> *"The AI doesn't need to guess anymore. We gave it eyes."*

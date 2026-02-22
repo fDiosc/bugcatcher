@@ -1,0 +1,22 @@
+{
+  "name": "@bugcatcher/cli",
+  "version": "1.0.0",
+  "main": "bin/bugcatcher.js",
+  "bin": {
+    "bugcatcher-init": "./bin/bugcatcher.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bugcatcher",
+    "cli"
+  ],
+  "author": "BugCatcher",
+  "license": "MIT",
+  "description": "BugCatcher MVP CLI Interactive Setup",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "inquirer": "^13.2.5"
+  }
+}
