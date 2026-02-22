@@ -29,7 +29,7 @@ export interface Project {
     mode: string;
     language: string;
     webhookUrl?: string;
-    captureConfig?: any;
+    captureConfig?: Record<string, unknown>;
     createdAt: string;
 }
 
@@ -44,13 +44,13 @@ export interface Report {
     reproductionSteps?: string;
     severity: string;
     status: string;
-    events?: any;
+    events?: unknown[];
     screenshots?: string[];
     replayInsights?: string;
-    metadata?: any;
-    consoleErrors?: any;
-    networkLog?: any;
-    performanceMetrics?: any;
+    metadata?: Record<string, unknown>;
+    consoleErrors?: unknown[];
+    networkLog?: unknown[];
+    performanceMetrics?: Record<string, unknown>;
     rootCause?: string;
     suggestedFix?: string;
     devTimeEstimate?: string;
@@ -111,19 +111,19 @@ export const db = {
                 }
             });
         },
-        create: async ({ data }: { data: any }) => {
+        create: async ({ data }: { data: Omit<Project, 'id' | 'createdAt'> }) => {
             return prisma.project.create({ data });
         },
         update: async ({ where, data }: { where: { id: string }, data: Partial<Project> }) => {
-            return prisma.project.update({ where, data: data as any });
+            return prisma.project.update({ where, data: data as never });
         }
     },
     reports: {
-        create: async ({ data }: { data: any }) => {
+        create: async ({ data }: { data: Omit<Report, 'id' | 'createdAt'> }) => {
             return prisma.report.create({ data });
         },
         update: async ({ where, data }: { where: { id: string }, data: Partial<Report> }) => {
-            return prisma.report.update({ where, data: data as any });
+            return prisma.report.update({ where, data });
         },
         findUnique: async ({ where }: { where: { id: string } }) => {
             return prisma.report.findUnique({

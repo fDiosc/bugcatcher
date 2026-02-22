@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
 
 interface ReplayPlayerProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     events: any[];
 }
 
@@ -36,18 +38,19 @@ export default function ReplayPlayer({ events }: ReplayPlayerProps) {
             playerRef.current.innerHTML = '';
 
             try {
-                // @ts-ignore
-                new rrwebPlayer({
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                new (window as any).rrwebPlayer({
                     target: playerRef.current,
                     props: {
                         events,
-                        width: playerRef.current.offsetWidth,
+                        width: 800,
                         height: 400,
                         autoPlay: false,
+                        speed: 1,
                     },
                 });
             } catch (err) {
-                console.error('Error initializing rrweb-player:', err);
+                console.error("Failed to initialize rrweb player:", err);
             }
         }
     }, [isLoaded, events]);

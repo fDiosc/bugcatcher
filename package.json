@@ -15,6 +15,7 @@
   "dependencies": {
     "@bugcatcher/react": "file:packages/react",
     "@prisma/client": "^6.19.2",
+    "@vercel/blob": "^2.3.0",
     "next": "16.1.6",
     "openai": "^6.21.0",
     "react": "19.2.3",

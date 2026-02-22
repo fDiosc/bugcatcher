@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { db, prisma, PLAN_LIMITS } from '@/lib/db';

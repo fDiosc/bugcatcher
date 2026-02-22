@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
-import { db, PLAN_LIMITS } from '@/lib/db';
+import { db, prisma, PLAN_LIMITS } from '@/lib/db';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 
 export async function POST(req: Request) {
     try {
@@ -10,11 +9,6 @@ export async function POST(req: Request) {
 
         if (!images || !Array.isArray(images) || images.length === 0) {
             return NextResponse.json({ error: 'No images provided' }, { status: 400 });
-        }
-
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
         }
 
         const savedPaths: string[] = [];
@@ -31,10 +25,14 @@ export async function POST(req: Request) {
             const data = matches[2];
             const buffer = Buffer.from(data, 'base64');
             const filename = crypto.randomUUID() + '.' + ext;
-            const filepath = path.join(uploadDir, filename);
 
-            fs.writeFileSync(filepath, buffer);
-            savedPaths.push(`/uploads/${filename}`);
+            // Upload to Vercel Blob
+            const blob = await put(`uploads/${filename}`, buffer, {
+                access: 'public',
+                contentType: `image/${ext}`,
+            });
+
+            savedPaths.push(blob.url);
         }
 
         return NextResponse.json({ success: true, paths: savedPaths });

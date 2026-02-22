@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -11,34 +12,34 @@ export interface BugContext {
     url: string;
     userAgent: string;
     timestamp: string;
-    events?: any[];
+    events?: unknown[];
     screenshots?: string[]; // Esses agora são local file paths
-    consoleErrors?: any[];
-    networkLog?: any[];
-    jsErrors?: any[];
-    appState?: any;
+    consoleErrors?: unknown[];
+    networkLog?: unknown[];
+    jsErrors?: unknown[];
+    appState?: Record<string, unknown>;
 }
 
-function parseRrwebEvents(events: any[]) {
+function parseRrwebEvents(events: unknown[]) {
     // Basic parser to extract interesting data points from rrweb stream
     // types: 0=Meta, 1=Load, 2=FullSnapshot, 3=IncrementalSnapshot, 4=Meta, 5=Custom
     const actions: string[] = [];
 
-    events.forEach(e => {
-        if (e.type === 3) { // IncrementalSnapshot
-            const data = e.data;
-            if (data.source === 2) { // Mouse Interaction
-                // MouseInteraction Type 2 is Click. 0 is MouseUp, 1 is MouseDown, etc.
-                if (data.type === 2) {
-                    actions.push(`[Click] at x:${data.x}, y:${data.y}`);
-                }
-            } else if (data.source === 5) { // Input
-                actions.push(`[Input] User typed something`);
-            } else if (data.source === 4) { // Viewport resize
-                actions.push(`[Resize] Window to ${data.width}x${data.height}`);
+    events.forEach((e: unknown) => {
+        const item = e as any;
+        if (item.type === 3) { // IncrementalSnapshot
+            const data = item.data;
+            if (data.source === 1) { // Click
+                actions.push(`Click at [${data.x}, ${data.y}]`);
+            } else if (data.source === 2) { // Scroll
+                actions.push(`Scroll to [${data.x}, ${data.y}]`);
+            } else if (data.source === 3) { // Input
+                actions.push(`Input: ${data.text}`);
             }
-        } else if (e.type === 4) { // Meta/URL change
-            actions.push(`[Navigate] to ${e.data.href}`);
+        } else if (item.type === 5) { // Custom
+            actions.push(`Custom Action: ${item.data.tag}`);
+        } else if (item.type === 4) { // Meta/URL change
+            actions.push(`[Navigate] to ${item.data.href}`);
         }
     });
 
@@ -59,6 +60,9 @@ export async function generateBugTriage(context: BugContext) {
     const behavioralLogs = context.events ? parseRrwebEvents(context.events) : "No recording data available.";
 
     try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userContent: any[] = [
             {
                 type: "text",

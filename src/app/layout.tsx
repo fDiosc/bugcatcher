@@ -29,7 +29,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <BugCatcherWidget apiKey="bc_3d92c3e3" />
+        <BugCatcherWidget apiKey="bc_demo_key_123" />
       </body>
     </html>
   );

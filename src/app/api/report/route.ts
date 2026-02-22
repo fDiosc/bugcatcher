@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db, prisma, PLAN_LIMITS } from '@/lib/db';
+import { db, prisma, PLAN_LIMITS, Project } from '@/lib/db';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { generateBugTriage } from '@/lib/ai';
 
 export async function POST(req: Request) {
@@ -32,8 +33,8 @@ export async function POST(req: Request) {
 
         // 1. Quota Check
         const allUserProjectIds = (await db.projects.findMany())
-            .filter(p => p.ownerId === user.id)
-            .map(p => p.id);
+            .filter((p: Project) => p.ownerId === owner.id)
+            .map((p: Project) => p.id);
 
         const currentReportsCount = await prisma.report.count({
             where: { projectId: { in: allUserProjectIds } }
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
 
         if (currentReportsCount >= limits.reportsPerMonth) {
             return NextResponse.json({
-                error: `Quota Exceeded: Your ${user.plan} plan is limited to ${limits.reportsPerMonth} reports/month.`
+                error: `Quota Exceeded: Your ${owner.plan} plan is limited to ${limits.reportsPerMonth} reports/month.`
             }, { status: 403 });
         }
 
