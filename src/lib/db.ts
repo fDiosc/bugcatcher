@@ -7,13 +7,13 @@ export { prisma };
 export interface User {
     id: string;
     email: string;
-    name: string;
+    name?: string | null;
     role: string;
-    plan: 'FREE' | 'BUILDER' | 'STUDIO' | 'ENTERPRISE';
-    createdAt: string;
+    plan: string;
+    createdAt: Date;
 }
 
-export const PLAN_LIMITS = {
+export const PLAN_LIMITS: Record<string, { projects: number; reportsPerMonth: number; devModeAllowed: boolean }> = {
     FREE: { projects: 1, reportsPerMonth: 10, devModeAllowed: false },
     BUILDER: { projects: 5, reportsPerMonth: 500, devModeAllowed: true },
     STUDIO: { projects: 15, reportsPerMonth: 2000, devModeAllowed: true },
@@ -24,41 +24,41 @@ export interface Project {
     id: string;
     name: string;
     apiKey: string;
-    clarityProjectId?: string;
+    clarityProjectId?: string | null;
     ownerId: string;
     mode: string;
     language: string;
-    webhookUrl?: string;
-    captureConfig?: Record<string, unknown>;
-    createdAt: string;
+    webhookUrl?: string | null;
+    captureConfig?: any;
+    createdAt: Date;
 }
 
 export interface Report {
     id: string;
     projectId: string;
-    claritySessionUrl?: string;
+    claritySessionUrl?: string | null;
     pageUrl: string;
     userAgent: string;
-    description?: string;
-    aiSummary?: string;
-    reproductionSteps?: string;
-    severity: string;
+    description?: string | null;
+    aiSummary?: string | null;
+    reproductionSteps?: string | null;
+    severity?: string | null;
     status: string;
-    events?: unknown[];
+    events?: any;
     screenshots?: string[];
-    replayInsights?: string;
-    metadata?: Record<string, unknown>;
-    consoleErrors?: unknown[];
-    networkLog?: unknown[];
-    performanceMetrics?: Record<string, unknown>;
-    rootCause?: string;
-    suggestedFix?: string;
-    devTimeEstimate?: string;
+    replayInsights?: string | null;
+    metadata?: any;
+    consoleErrors?: any;
+    networkLog?: any;
+    performanceMetrics?: any;
+    rootCause?: string | null;
+    suggestedFix?: string | null;
+    devTimeEstimate?: string | null;
     isRecurring?: boolean;
     relatedBugIds?: string[];
     assetPaths?: string[];
-    mode?: string;
-    createdAt: string;
+    mode: string;
+    createdAt: Date;
 }
 
 export const db = {

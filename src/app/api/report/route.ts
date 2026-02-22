@@ -65,7 +65,7 @@ export async function POST(req: Request) {
                 description,
                 pageUrl: url,
                 userAgent,
-                claritySessionUrl: claritySessionUrl || undefined,
+                claritySessionUrl: claritySessionUrl || null,
                 status: 'OPEN',
                 severity: 'MEDIUM',
                 events: recordingEvents || [],

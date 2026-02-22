@@ -11,8 +11,10 @@ export default function NewProjectPage() {
         const webhookUrl = formData.get('webhookUrl') as string;
 
         const user = await db.users.get();
-        const currentProjects = (await db.projects.findMany()).filter(p => p.ownerId === user.id);
-        const limit = PLAN_LIMITS[user.plan].projects;
+        if (!user) redirect('/login');
+
+        const currentProjects = (await db.projects.findMany()).filter((p: any) => p.ownerId === user.id);
+        const limit = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS].projects;
 
         if (currentProjects.length >= limit) {
             throw new Error(`Plan limit reached: Your ${user.plan} plan is limited to ${limit} project(s).`);
@@ -24,10 +26,11 @@ export default function NewProjectPage() {
                 name,
                 mode,
                 language: 'en',
-                clarityProjectId: clarityProjectId || undefined,
-                webhookUrl: webhookUrl || undefined,
+                clarityProjectId: clarityProjectId || null,
+                webhookUrl: webhookUrl || null,
                 apiKey: `bc_${globalThis.crypto.randomUUID().split('-')[0]}`,
-                ownerId: user.id
+                ownerId: user.id,
+                captureConfig: null
             }
         });
 

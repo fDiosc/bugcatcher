@@ -54,8 +54,8 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 </a>
                                 <a
                                     href={
-                                        report.metadata?.rawClarityUserId
-                                            ? `https://clarity.microsoft.com/player/${report.project?.clarityProjectId}/${report.metadata.rawClarityUserId}/${report.metadata.rawClarityId}`
+                                        (report.metadata as any)?.rawClarityUserId
+                                            ? `https://clarity.microsoft.com/player/${(report as any).project?.clarityProjectId}/${(report.metadata as any).rawClarityUserId}/${(report.metadata as any).rawClarityId}`
                                             : `${report.claritySessionUrl}?q=BugReported`
                                     }
                                     target="_blank"
@@ -83,7 +83,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                     </h3>
                     <span className="text-xs text-slate-400">Captured rolling 60s events buffer</span>
                 </div>
-                <ReplayPlayer events={report.events || []} />
+                <ReplayPlayer events={(report.events as any) || []} />
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -119,7 +119,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
 
                                     {/* Film Strip */}
                                     <div className="flex gap-2 pb-2 overflow-x-auto scrollbar-hide">
-                                        {report.assetPaths.map((src, idx) => (
+                                        {(report.assetPaths as string[]).map((src: string, idx: number) => (
                                             <a
                                                 key={idx}
                                                 href={src}
@@ -203,11 +203,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
 
                             <div className="space-y-6">
                                 {/* Console Logs */}
-                                {report.consoleErrors && report.consoleErrors.length > 0 && (
+                                {Array.isArray(report.consoleErrors) && report.consoleErrors.length > 0 && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Console Operations</h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-slate-300">
-                                            {report.consoleErrors.map((log: any, i: number) => (
+                                            {(report.consoleErrors as any[]).map((log: any, i: number) => (
                                                 <div key={i} className={`py-1 border-b border-white/5 ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : ''}`}>
                                                     <span className="opacity-50 mr-2">[{new Date(log.timestamp).toISOString().split('T')[1].split('.')[0]}]</span>
                                                     [{log.level.toUpperCase()}] {log.message}
@@ -218,11 +218,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 )}
 
                                 {/* Network Logs */}
-                                {report.networkLog && report.networkLog.length > 0 && (
+                                {Array.isArray(report.networkLog) && report.networkLog.length > 0 && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Network Warnings (Failed / Slow &gt;1s)</h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-slate-300">
-                                            {report.networkLog.map((net: any, i: number) => (
+                                            {(report.networkLog as any[]).map((net: any, i: number) => (
                                                 <div key={i} className={`py-1 flex gap-4 border-b border-white/5 ${net.status >= 400 || net.error ? 'text-red-400' : 'text-yellow-400'}`}>
                                                     <span className="font-bold w-12">{net.method}</span>
                                                     <span className="w-12">{net.status || 'ERR'}</span>
@@ -235,11 +235,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 )}
 
                                 {/* JS Exceptions */}
-                                {report.metadata?.jsErrors && report.metadata.jsErrors.length > 0 && (
+                                {((report.metadata as any)?.jsErrors as any[])?.length > 0 && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Uncaught JS Exceptions</h4>
                                         <div className="bg-red-950/50 border border-red-900/50 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-red-300">
-                                            {report.metadata.jsErrors.map((err: any, i: number) => (
+                                            {((report.metadata as any)?.jsErrors as any[])?.map((err: any, i: number) => (
                                                 <div key={i} className="mb-4 last:mb-0">
                                                     <div className="font-bold text-red-400 mb-1">{err.type}: {err.message || err.reason}</div>
                                                     {err.filename && <div className="text-red-500/80 mb-1">at {err.filename}:{err.lineno}:{err.colno}</div>}
@@ -251,13 +251,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 )}
 
                                 {/* App State (Redux/Zustand etc) */}
-                                {report.metadata?.appState && (
+                                {(report.metadata as any)?.appState && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center justify-between">
                                             Global App State (Snapshot)
                                         </h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-indigo-300">
-                                            <pre className="whitespace-pre-wrap">{JSON.stringify(report.metadata.appState, null, 2)}</pre>
+                                            <pre className="whitespace-pre-wrap">{JSON.stringify((report.metadata as any).appState, null, 2)}</pre>
                                         </div>
                                     </div>
                                 )}
