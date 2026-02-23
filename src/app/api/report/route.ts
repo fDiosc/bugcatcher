@@ -134,11 +134,21 @@ export async function POST(req: Request) {
             }
         })();
 
-        return NextResponse.json({ success: true, id: report.id });
+        return NextResponse.json({ success: true, id: report.id }, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            }
+        });
 
     } catch (error) {
         console.error('API Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, {
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            }
+        });
     }
 }
 

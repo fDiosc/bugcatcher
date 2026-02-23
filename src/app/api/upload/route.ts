@@ -35,10 +35,20 @@ export async function POST(req: Request) {
             savedPaths.push(blob.url);
         }
 
-        return NextResponse.json({ success: true, paths: savedPaths });
+        return NextResponse.json({ success: true, paths: savedPaths }, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            }
+        });
     } catch (error) {
         console.error('Upload Error:', error);
-        return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+        return NextResponse.json({ error: 'Upload failed' }, {
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            }
+        });
     }
 }
 

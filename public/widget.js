@@ -18,10 +18,13 @@
         let language = 'en';
 
         try {
-            // Determine the base URL. If injected from localhost, use that, else assume relative if on the same domain (for testing).
-            // In a real prod environment, this would point to the BugCatcher API domain.
+            // Ensure baseUrl is absolute and reliable
             const scriptSrc = script.src;
-            const baseUrl = scriptSrc ? new URL(scriptSrc).origin : 'https://bugcatcher.app';
+            let baseUrl = 'https://bugcatcher.app';
+            if (scriptSrc && scriptSrc.startsWith('http')) {
+                baseUrl = new URL(scriptSrc).origin;
+            }
+            window.__bc_baseUrl = baseUrl; // Store for other calls
 
             console.log('BugCatcher: Fetching remote configuration for project...', projectKey);
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);
@@ -242,9 +245,18 @@
 
         let isRecording = false;
         let captureInterval = null;
-        let lastScreenshot = null; // Fix ReferenceError
+        let lastScreenshot = null;
+        let lastScreenshotTime = 0; // Cooldown tracker
 
         const captureFrame = async (clickX = null, clickY = null) => {
+            const now = Date.now();
+            // 10s cooldown for captures unless it's the very first one
+            if (clickX !== null && now - lastScreenshotTime < 10000) {
+                return;
+            }
+            if (clickX === null && now - lastScreenshotTime < 30000) {
+                return; // Background capture even slower
+            }
             if (typeof html2canvas === 'undefined') {
                 // If library not loaded yet, try again soon
                 if (clickX === null) setTimeout(captureFrame, 1000);
@@ -277,9 +289,11 @@
                     }
                 });
 
-                const frame = canvas.toDataURL('image/jpeg', 0.4); // More compression since resolution is higher
+                const frame = canvas.toDataURL('image/jpeg', 0.4);
                 screenshots.push(frame);
-                const maxFrames = devMode ? 10 : 5; // Client mode uses only 5 frames
+                lastScreenshotTime = Date.now(); // Update cooldown
+
+                const maxFrames = devMode ? 10 : 5;
                 if (screenshots.length > maxFrames) screenshots.shift();
 
                 try {
@@ -349,10 +363,10 @@
                     });
                 }, true);
 
-                // Slower fallback interval for typing/animations
+                // Much slower fallback interval for background
                 captureInterval = setInterval(() => {
                     if (!window.__bc_capturing) captureFrame();
-                }, 8000);
+                }, 60000); // 60s background capture
 
                 console.log('BugCatcher: Event-driven Vision active');
             }
@@ -698,7 +712,7 @@
             if (screenshots.length > 0) {
                 submitBtn.innerText = loc.uploading;
                 try {
-                    const uploadRes = await fetch('/api/upload', {
+                    const uploadRes = await fetch(`${window.__bc_baseUrl}/api/upload`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ images: screenshots })
@@ -757,7 +771,7 @@
 
             try {
                 console.log('BugCatcher: Fetching /api/report...');
-                const response = await fetch('/api/report', {
+                const response = await fetch(`${window.__bc_baseUrl}/api/report`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
