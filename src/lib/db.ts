@@ -89,11 +89,17 @@ export const db = {
         },
         get: async () => {
             const sid = await getSessionId();
-            if (!sid) return null;
+            if (!sid) {
+                console.log('[DB] No sid found in getSessionId');
+                return null;
+            }
 
-            return prisma.user.findUnique({
+            const user = await prisma.user.findUnique({
                 where: { id: sid }
             });
+
+            console.log(`[DB] db.users.get for sid ${sid}: ${user ? `FOUND (${user.email})` : 'NOT FOUND'}`);
+            return user;
         },
         updatePlan: async (userId: string, plan: 'FREE' | 'BUILDER' | 'STUDIO' | 'ENTERPRISE') => {
             return prisma.user.update({

@@ -13,8 +13,11 @@ export default async function DashboardLayout({
     const user = await db.users.get();
 
     if (!user) {
+        console.log('[LAYOUT] No user found in DashboardLayout, redirecting to /login');
         redirect('/login');
     }
+
+    console.log(`[LAYOUT] Rendering DashboardLayout for user: ${user.email} (ID: ${user.id})`);
 
     const limits = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS];
     // ...
