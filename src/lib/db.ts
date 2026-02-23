@@ -1,8 +1,5 @@
-/* eslint-disable */
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 import { getSessionId } from './auth';
-
-const prisma = new PrismaClient();
 
 // Re-exporting prisma for direct use if needed
 export { prisma };
