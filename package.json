@@ -4,17 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build --workspace=@bugcatcher/react && next build",
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@bugcatcher/react": "file:packages/react",
+    "@bugcatcher/react": "*",
     "@prisma/client": "^6.19.2",
     "@vercel/blob": "^2.3.0",
     "next": "16.1.6",
