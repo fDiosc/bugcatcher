@@ -246,7 +246,7 @@ const ISTEPS = [
   },
   {
     t: "You're live. Ctrl+Shift+B.", d: 'Your first bug is one shortcut away.', lines: [
-      { c: '#22c55e', t: '✓  Widget active on localhost:3000' },
+      { c: '#22c55e', t: '✓  Widget active on bugcatcher.app' },
       { c: '', t: '' },
       { c: '#60a5fa', t: '  DEV MODE    → Ctrl+Shift+B' },
       { c: '#60a5fa', t: '  CLIENT MODE → bottom-right button' },

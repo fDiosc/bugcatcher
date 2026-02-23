@@ -20,7 +20,7 @@
             // Determine the base URL. If injected from localhost, use that, else assume relative if on the same domain (for testing).
             // In a real prod environment, this would point to the BugCatcher API domain.
             const scriptSrc = script.src;
-            const baseUrl = scriptSrc ? new URL(scriptSrc).origin : 'http://localhost:3000';
+            const baseUrl = scriptSrc ? new URL(scriptSrc).origin : 'https://bugcatcher.app';
 
             console.log('BugCatcher: Fetching remote configuration for project...', projectKey);
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);

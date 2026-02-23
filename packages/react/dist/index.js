@@ -10,8 +10,8 @@ export var BugCatcherWidget = function (_a) {
         if (document.querySelector('script[data-bugcatcher-injected]'))
             return;
         var script = document.createElement('script');
-        // Using absolute localhost URL for the local simulation instead of a public CDN
-        script.src = 'http://localhost:3000/widget.js';
+        // Use absolute URL for production to work across different domains
+        script.src = 'https://bugcatcher.app/widget.js';
         script.setAttribute('data-project', apiKey);
         script.setAttribute('data-bugcatcher-injected', 'true');
         script.async = true;

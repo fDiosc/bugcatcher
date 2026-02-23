@@ -1,8 +1,12 @@
 {
   "name": "@bugcatcher/react",
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "2.0.0",
+  "description": "BugCatcher v2.0 React SDK for intelligent bug capture.",
+  "homepage": "https://bugcatcher.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fDiosc/bugcatcher.git"
+  },
   "scripts": {
     "build": "tsc"
   },
@@ -12,7 +16,6 @@
   ],
   "author": "BugCatcher",
   "license": "MIT",
-  "description": "BugCatcher MVP React Wrapper",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"

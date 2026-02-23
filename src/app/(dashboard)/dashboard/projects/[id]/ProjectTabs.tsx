@@ -222,7 +222,7 @@ export default function ProjectTabs({ project }: { project: any }) {
                             <div className="bg-[#0d1117] border border-slate-800/60 rounded-xl p-4 font-mono text-sm text-yellow-300 overflow-x-auto shadow-inner">
                                 <pre>
                                     {`<!-- BugCatcher Widget -->
-<script src="http://localhost:3000/widget.js" data-project="${project.apiKey}"></script>`}
+<script src="https://bugcatcher.app/widget.js" data-project="${project.apiKey}"></script>`}
                                 </pre>
                             </div>
                         </div>

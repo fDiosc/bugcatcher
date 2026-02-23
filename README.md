@@ -57,8 +57,8 @@ O Dashboard processa e exibe a "explosão" de dados vindos do widget em três pi
    \`\`\`bash
    npm run dev
    \`\`\`
-3. Acesse `http://localhost:3000` para ver os botões de simulação e erro na home.
-4. Para testar o dashboard, entre em `http://localhost:3000/dashboard`.
+3. Acesse `https://bugcatcher.app` para ver os botões de simulação e erro na home.
+4. Para testar o dashboard, entre em `https://bugcatcher.app/dashboard`.
 5. Acione o widget na tela com **Ctrl+Shift+B** (ou clique no botão redondo do canto inferior direito).
 
 ---
