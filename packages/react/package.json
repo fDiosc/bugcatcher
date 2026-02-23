@@ -1,6 +1,6 @@
 {
   "name": "@bugcatcher/react",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "BugCatcher v2.0 React SDK for intelligent bug capture.",
   "homepage": "https://bugcatcher.app",
   "repository": {

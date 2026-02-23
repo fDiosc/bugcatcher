@@ -14,8 +14,8 @@ export const BugCatcherWidget: React.FC<BugCatcherProps> = ({ apiKey }) => {
         if (document.querySelector('script[data-bugcatcher-injected]')) return;
 
         const script = document.createElement('script');
-        // Use absolute URL for production to work across different domains
-        script.src = 'https://bugcatcher.app/widget.js';
+        // Use canonical www URL to avoid CORS preflight redirects from apex domain
+        script.src = 'https://www.bugcatcher.app/widget.js';
         script.setAttribute('data-project', apiKey);
         script.setAttribute('data-bugcatcher-injected', 'true');
         script.async = true;
