@@ -32,8 +32,7 @@ export async function POST(req: Request) {
         const limits = PLAN_LIMITS[owner.plan as keyof typeof PLAN_LIMITS];
 
         // 1. Quota Check
-        const allUserProjectIds = (await db.projects.findMany())
-            .filter((p: Project) => p.ownerId === owner.id)
+        const allUserProjectIds = (await db.projects.findMany(owner.id))
             .map((p: Project) => p.id);
 
         const currentReportsCount = await prisma.report.count({

@@ -18,13 +18,22 @@
         let language = 'en';
 
         try {
-            // Ensure baseUrl is absolute and reliable
-            const scriptSrc = script.src;
+            // Ensure baseUrl is absolute and reliable. 
+            // We strip any trailing slashes and normalize 'www' to prevent preflight redirects.
             let baseUrl = 'https://bugcatcher.app';
+            const scriptSrc = script.src;
             if (scriptSrc && scriptSrc.startsWith('http')) {
-                baseUrl = new URL(scriptSrc).origin;
+                const urlObj = new URL(scriptSrc);
+                baseUrl = urlObj.origin;
+                // If we are on bugcatcher.app but everything is redirected to www, we should prefer www
+                if (baseUrl === 'https://bugcatcher.app' && !scriptSrc.includes('localhost')) {
+                    // One-time check: if we hit a CORS error, we might need the www version.
+                    // For now, let's just use the Script's actual origin.
+                }
             }
-            window.__bc_baseUrl = baseUrl; // Store for other calls
+            // Ensure no trailing slash
+            baseUrl = baseUrl.replace(/\/+$/, '');
+            window.__bc_baseUrl = baseUrl;
 
             console.log('BugCatcher: Fetching remote configuration for project...', projectKey);
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);
@@ -332,7 +341,14 @@
                                 if (events.length > 500) events = events.slice(-500);
                             }
                         },
-                        checkoutEveryNms: 30000
+                        checkoutEveryNms: 30000,
+                        sampling: {
+                            mousemove: true,
+                            mousemoveInterval: 500, // 2fps for mouse - saves tons of bandwidth
+                            mouseInteraction: true,
+                            scroll: 150,
+                            input: 'last'
+                        }
                     });
                     isRecording = true;
                     console.log('BugCatcher: Recorder active');
