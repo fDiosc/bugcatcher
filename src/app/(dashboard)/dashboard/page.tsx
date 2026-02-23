@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, Project } from '@/lib/db';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -22,13 +22,13 @@ export default async function DashboardPage() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project: any) => (
+            {(projects as Project[]).map((project) => (
                 <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
                     <div className="bg-white p-6 rounded-xl border border-slate-200 hover:shadow-lg transition-all cursor-pointer group">
                         <div className="flex justify-between items-start mb-4">
                             <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{project.name}</h3>
                             <span className="text-xs font-semibold px-2 py-1 bg-slate-100 text-slate-600 rounded">
-                                {project._count.reports} reports
+                                {project._count?.reports || 0} reports
                             </span>
                         </div>
                         <div className="space-y-2 mb-6">

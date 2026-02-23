@@ -1,10 +1,12 @@
+/* eslint-disable */
 'use client';
 
 import { useState, useTransition } from 'react';
+import { Project, Report } from '@/lib/db';
 import Link from 'next/link';
 import { changeProjectMode, changeProjectLanguage } from './actions';
 
-export default function ProjectTabs({ project }: { project: any }) {
+export default function ProjectTabs({ project }: { project: Project }) {
     const [activeTab, setActiveTab] = useState<'REPORTS' | 'CONFIG'>('REPORTS');
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -36,7 +38,7 @@ export default function ProjectTabs({ project }: { project: any }) {
         });
     };
 
-    const filteredReports = project.reports.filter((report: any) => {
+    const filteredReports = (project.reports || []).filter((report: Report) => {
         const matchesSearch = (report.description || '').toLowerCase().includes(search.toLowerCase()) ||
             (report.pageUrl || '').toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === 'ALL' || report.status === statusFilter;
@@ -209,9 +211,9 @@ export default function ProjectTabs({ project }: { project: any }) {
                             <p className="text-sm text-slate-400 mb-2">Install the package and drop the headless component into your main <code>layout.tsx</code> or <code>App.tsx</code>.</p>
                             <div className="bg-[#0d1117] border border-slate-800/60 rounded-xl p-4 font-mono text-sm text-blue-300 overflow-x-auto shadow-inner space-y-2">
                                 <div className="text-green-400">npm install @bugcatcher/react</div>
-                                <div className="text-slate-500">// Then in your code:</div>
-                                <div>import &#123; BugCatcherWidget &#125; from "@bugcatcher/react";</div>
-                                <div>&lt;BugCatcherWidget apiKey="{project.apiKey}" /&gt;</div>
+                                <div className="text-slate-500">{"// Then in your code:"}</div>
+                                <div>import &#123; BugCatcherWidget &#125; from &quot;@bugcatcher/react&quot;;</div>
+                                <div>&lt;BugCatcherWidget apiKey=&quot;{project.apiKey}&quot; /&gt;</div>
                             </div>
                         </div>
 

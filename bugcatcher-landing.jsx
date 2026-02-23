@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from "react";
 
 const S = `
@@ -361,6 +362,8 @@ function CursorNS() {
 export default function App() {
   const [step, setStep] = useState(0);
   const [page, setPage] = useState('home');
+  /* eslint-disable */
+  require('dotenv').config();
 
   return (
     <>

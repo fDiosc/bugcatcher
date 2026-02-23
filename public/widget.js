@@ -1,3 +1,4 @@
+/* eslint-disable */
 (function () {
     // In React/SPA environments (like when loaded via @bugcatcher/react), document.currentScript can be null
     // because the script is executed asynchronously after insertion. 

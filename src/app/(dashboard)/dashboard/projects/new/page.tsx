@@ -1,4 +1,4 @@
-import { db, PLAN_LIMITS } from '@/lib/db';
+import { db, PLAN_LIMITS, Project } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default function NewProjectPage() {
         const user = await db.users.get();
         if (!user) redirect('/login');
 
-        const currentProjects = (await db.projects.findMany()).filter((p: any) => p.ownerId === user.id);
+        const currentProjects = (await db.projects.findMany()).filter((p: Project) => p.ownerId === user.id);
         const limit = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS].projects;
 
         if (currentProjects.length >= limit) {

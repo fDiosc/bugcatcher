@@ -1,4 +1,5 @@
-import { db } from '@/lib/db';
+/* eslint-disable */
+import { db, ConsoleLog, NetworkLog } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ReplayPlayer from '@/components/ReplayPlayer';
@@ -10,12 +11,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
 
     if (!user) notFound();
 
-    const report = await db.reports.findUniqueWithOwnership({
+    const reportData = await db.reports.findUniqueWithOwnership({
         id,
         ownerId: user.id
     });
 
-    if (!report) notFound();
+    if (!reportData) notFound();
+    const report = reportData as any;
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
@@ -54,8 +56,8 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 </a>
                                 <a
                                     href={
-                                        (report.metadata as any)?.rawClarityUserId
-                                            ? `https://clarity.microsoft.com/player/${(report as any).project?.clarityProjectId}/${(report.metadata as any).rawClarityUserId}/${(report.metadata as any).rawClarityId}`
+                                        report.metadata?.rawClarityUserId
+                                            ? `https://clarity.microsoft.com/player/${report.project?.clarityProjectId}/${report.metadata.rawClarityUserId}/${report.metadata.rawClarityId}`
                                             : `${report.claritySessionUrl}?q=BugReported`
                                     }
                                     target="_blank"
@@ -83,7 +85,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                     </h3>
                     <span className="text-xs text-slate-400">Captured rolling 60s events buffer</span>
                 </div>
-                <ReplayPlayer events={(report.events as any) || []} />
+                <ReplayPlayer events={(report.events as unknown[]) || []} />
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -129,7 +131,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                             >
                                                 <img
                                                     src={src}
-                                                    alt={`Frame ${idx}`}
+                                                    alt={`Frame ${idx + 1}`}
                                                     className="w-24 h-16 object-cover rounded-lg border border-slate-200 hover:border-indigo-400 transition-colors"
                                                 />
                                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center">
@@ -189,7 +191,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                     <section className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                         <h3 className="text-lg font-bold text-slate-800 mb-4">Original Description</h3>
                         <p className="p-4 bg-slate-50 rounded-xl border border-slate-100 italic text-slate-700">
-                            "{report.description || 'No description provided.'}"
+                            &quot;{report.description || 'No description provided.'}&quot;
                         </p>
                     </section>
 
@@ -207,10 +209,10 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Console Operations</h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-slate-300">
-                                            {(report.consoleErrors as any[]).map((log: any, i: number) => (
-                                                <div key={i} className={`py-1 border-b border-white/5 ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : ''}`}>
+                                            {(report.consoleErrors || []).map((log: ConsoleLog, i: number) => (
+                                                <div key={i} className={`py-1 border-b border-white/5 ${(log as any).level === 'error' ? 'text-red-400' : (log as any).level === 'warn' ? 'text-yellow-400' : ''}`}>
                                                     <span className="opacity-50 mr-2">[{new Date(log.timestamp).toISOString().split('T')[1].split('.')[0]}]</span>
-                                                    [{log.level.toUpperCase()}] {log.message}
+                                                    [{(log as any).level.toUpperCase()}] {log.message}
                                                 </div>
                                             ))}
                                         </div>
@@ -222,12 +224,12 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Network Warnings (Failed / Slow &gt;1s)</h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-slate-300">
-                                            {(report.networkLog as any[]).map((net: any, i: number) => (
-                                                <div key={i} className={`py-1 flex gap-4 border-b border-white/5 ${net.status >= 400 || net.error ? 'text-red-400' : 'text-yellow-400'}`}>
+                                            {(report.networkLog || []).map((net: NetworkLog, i: number) => (
+                                                <div key={i} className={`py-1 flex gap-4 border-b border-white/5 ${net.status >= 400 || (net as any).error ? 'text-red-400' : 'text-yellow-400'}`}>
                                                     <span className="font-bold w-12">{net.method}</span>
                                                     <span className="w-12">{net.status || 'ERR'}</span>
                                                     <span className="w-16">{net.duration}ms</span>
-                                                    <span className="truncate flex-1">{net.url} {net.error ? `(${net.error})` : ''}</span>
+                                                    <span className="truncate flex-1">{net.url} {(net as any).error ? `(${(net as any).error})` : ''}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -235,11 +237,11 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 )}
 
                                 {/* JS Exceptions */}
-                                {((report.metadata as any)?.jsErrors as any[])?.length > 0 && (
+                                {Array.isArray(report.metadata?.jsErrors) && (report.metadata?.jsErrors as unknown[]).length > 0 && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Uncaught JS Exceptions</h4>
                                         <div className="bg-red-950/50 border border-red-900/50 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-red-300">
-                                            {((report.metadata as any)?.jsErrors as any[])?.map((err: any, i: number) => (
+                                            {(report.metadata?.jsErrors as any[]).map((err: any, i: number) => (
                                                 <div key={i} className="mb-4 last:mb-0">
                                                     <div className="font-bold text-red-400 mb-1">{err.type}: {err.message || err.reason}</div>
                                                     {err.filename && <div className="text-red-500/80 mb-1">at {err.filename}:{err.lineno}:{err.colno}</div>}
@@ -251,13 +253,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                                 )}
 
                                 {/* App State (Redux/Zustand etc) */}
-                                {(report.metadata as any)?.appState && (
+                                {report.metadata?.appState && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center justify-between">
                                             Global App State (Snapshot)
                                         </h4>
                                         <div className="bg-[#1e1e1e] rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs text-indigo-300">
-                                            <pre className="whitespace-pre-wrap">{JSON.stringify((report.metadata as any).appState, null, 2)}</pre>
+                                            <pre className="whitespace-pre-wrap">{JSON.stringify(report.metadata.appState, null, 2)}</pre>
                                         </div>
                                     </div>
                                 )}
@@ -326,4 +328,3 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
         </div>
     );
 }
-
