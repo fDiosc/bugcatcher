@@ -1,51 +1,32 @@
 /* eslint-disable */
 (function () {
-    // In React/SPA environments (like when loaded via @bugcatcher/react), document.currentScript can be null
-    // because the script is executed asynchronously after insertion. 
-    // We explicitly find the script tag that has our required dataset.
     const script = document.currentScript || document.querySelector('script[data-project][src*="widget.js"]');
     const projectKey = script ? script.getAttribute('data-project') : null;
-    const clarityId = script ? script.getAttribute('data-clarity') : null;
 
     if (!projectKey) {
         console.error('BugCatcher: Missing data-project attribute');
         return;
     }
 
-    // Global State
     let devMode = false;
     let language = 'en';
     let isRecording = false;
-    let visionInitialized = false;
     let lastScreenshotTime = 0;
     let events = [];
     let screenshots = [];
-    let loc = {}; // Localization object
+    let loc = {};
 
     const STORAGE_KEY = 'bugcatcher_recording_buffer';
     const SCREENSHOT_KEY = 'bugcatcher_screenshots';
 
-    // 1. Debounced Storage Logic to prevent "Stuttering"
     const debounceStorage = (key, data, delay = 5000) => {
         const timerKey = `_bc_timer_${key}`;
         if (window[timerKey]) clearTimeout(window[timerKey]);
         window[timerKey] = setTimeout(() => {
-            try {
-                sessionStorage.setItem(key, JSON.stringify(data));
-            } catch (e) {
-                // Handle quota errors by aggressively trimming old data
-                if (e.name === 'QuotaExceededError') {
-                    console.warn('BugCatcher: Storage full, trimming old history');
-                    if (key === STORAGE_KEY && data.length > 500) {
-                        const trimmed = [data[0], data[1], ...data.slice(-250)];
-                        sessionStorage.setItem(key, JSON.stringify(trimmed));
-                    }
-                }
-            }
+            try { sessionStorage.setItem(key, JSON.stringify(data)); } catch (e) { }
         }, delay);
     };
 
-    // 2. Interceptor Persistence Logic
     const consoleLogs = [];
     const networkLogs = [];
     const jsErrors = [];
@@ -53,14 +34,12 @@
     const enableDevInterceptors = () => {
         if (window.__bc_interceptors_active) return;
         window.__bc_interceptors_active = true;
+        console.log('BugCatcher: Dev Mode Active (Telemetry Enabled)');
 
         const originalConsole = { log: console.log, warn: console.warn, error: console.error };
         const pushLog = (level, args) => {
             try {
-                const message = Array.from(args).map(a => {
-                    if (a instanceof Error) return a.stack || a.message || String(a);
-                    return typeof a === 'object' ? JSON.stringify(a) : String(a);
-                }).join(' ');
+                const message = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
                 consoleLogs.push({ level, message, timestamp: Date.now() });
                 if (consoleLogs.length > 100) consoleLogs.shift();
             } catch (e) { }
@@ -70,47 +49,27 @@
         console.warn = function () { originalConsole.warn.apply(console, arguments); pushLog('warn', arguments); };
         console.error = function () { originalConsole.error.apply(console, arguments); pushLog('error', arguments); };
 
-        window.addEventListener('error', (event) => {
-            const target = event.target || event.srcElement;
-            if (target instanceof HTMLElement && (target.tagName === 'IMG' || target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
-                networkLogs.push({ type: 'resource', method: 'GET', url: target.src || target.href, status: 'FAILED', timestamp: Date.now() });
-                return;
-            }
-            jsErrors.push({ type: 'error', message: event.message, filename: event.filename, lineno: event.lineno, error: event.error ? event.error.stack : null, timestamp: Date.now() });
-        }, true);
-
-        const originalFetch = window.fetch;
-        window.fetch = async function (...args) {
-            const start = Date.now();
-            try {
-                const res = await originalFetch.apply(this, args);
-                // Log failed or slow requests
-                if (!res.ok || res.status >= 400 || (Date.now() - start > 2000)) {
-                    networkLogs.push({ type: 'fetch', url: args[0].url || args[0], status: res.status, duration: Date.now() - start, timestamp: start });
-                }
-                return res;
-            } catch (e) {
-                networkLogs.push({ type: 'fetch', url: args[0].url || args[0], error: e.message, status: 'FAILED', timestamp: start });
-                throw e;
-            }
-        };
+        window.addEventListener('error', (e) => {
+            jsErrors.push({ type: 'error', message: e.message, filename: e.filename, lineno: e.lineno, timestamp: Date.now() });
+        });
     };
 
-    // 3. UI and Localization
     const t = {
         'en': {
             btnDev: '🐞 Report Bug (Dev)', btnClient: 'Report Bug',
-            clientTitle: 'Oops! Did something go wrong?', clientSubtitle: 'What were you trying to do?',
-            cancel: 'Cancel', submit: 'Submit Feedback', submitDev: 'Submit',
-            sending: 'Sending...', uploaded: 'Sent! 🎉', serverError: 'Retry later ({status})',
-            genericError: 'Error occurred'
+            title: 'Report a Bug', subtitle: 'What happened?',
+            devTitle: '[Dev] Bug Report', devSubtitle: 'Telemetry will be attached.',
+            placeholder: 'Ex: I clicked Save and it crashed...',
+            cancel: 'Cancel', submit: 'Submit', sending: 'Sending...', sent: 'Sent! 🎉',
+            severity: { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' }
         },
         'pt-br': {
             btnDev: '🐞 Reportar Bug (Dev)', btnClient: 'Reportar Erro',
-            clientTitle: 'Ops! Ocorreu um problema?', clientSubtitle: 'O que você tentava fazer?',
-            cancel: 'Cancelar', submit: 'Enviar Feedback', submitDev: 'Enviar',
-            sending: 'Enviando...', uploaded: 'Enviado! 🎉', serverError: 'Tente novamente ({status})',
-            genericError: 'Erro inesperado'
+            title: 'Reportar um Problema', subtitle: 'O que aconteceu?',
+            devTitle: '[Dev] Relato de Bug', devSubtitle: 'A telemetria será enviada.',
+            placeholder: 'Ex: Cliquei em salvar e a tela travou...',
+            cancel: 'Cancelar', submit: 'Enviar', sending: 'Enviando...', sent: 'Enviado! 🎉',
+            severity: { low: 'Baixo', medium: 'Médio', high: 'Alto', critical: 'Crítico' }
         }
     };
 
@@ -119,14 +78,42 @@
         loc = t[language] || t['en'];
 
         const styles = `
-            #bugcatcher-widget-btn { position: fixed; bottom: 20px; right: 20px; background: #0070f3; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-family: sans-serif; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999999; }
-            #bugcatcher-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999999; justify-content: center; align-items: center; }
-            #bugcatcher-modal { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: sans-serif; }
-            #bugcatcher-modal textarea { width: 100%; height: 100px; margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; resize: none; font-family: inherit; }
-            #bugcatcher-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
-            #bugcatcher-modal-actions button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; }
-            .bc-btn-submit { background: #0070f3; color: white; }
-            .bc-btn-cancel { background: #eee; color: #333; }
+            #bugcatcher-widget-btn { 
+                position: fixed !important; bottom: 20px !important; right: 20px !important; 
+                background: #0070f3 !important; color: white !important; border: none !important; 
+                border-radius: 50px !important; padding: 12px 24px !important; font-family: sans-serif !important; 
+                font-weight: bold !important; cursor: pointer !important; z-index: 2147483646 !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            }
+            #bugcatcher-modal-overlay { 
+                display: none !important; position: fixed !important; top: 0 !important; left: 0 !important; 
+                width: 100% !important; height: 100% !important; background: rgba(0,0,0,0.6) !important; 
+                z-index: 2147483647 !important; justify-content: center !important; align-items: center !important;
+            }
+            #bugcatcher-modal { 
+                background: #ffffff !important; color: #111111 !important; padding: 24px !important; 
+                border-radius: 12px !important; width: 90% !important; max-width: 400px !important; 
+                box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important; font-family: -apple-system, sans-serif !important;
+                text-align: left !important;
+            }
+            #bugcatcher-modal h2 { margin: 0 0 8px 0 !important; color: #111 !important; font-size: 20px !important; font-weight: bold !important; }
+            #bugcatcher-modal p { margin: 0 0 16px 0 !important; color: #444 !important; font-size: 14px !important; }
+            #bugcatcher-modal textarea { 
+                width: 100% !important; height: 100px !important; margin: 12px 0 !important; padding: 12px !important; 
+                border: 1px solid #ccc !important; border-radius: 8px !important; box-sizing: border-box !important; 
+                resize: none !important; color: #111 !important; background: #fff !important; font-size: 14px !important;
+            }
+            #bugcatcher-modal select {
+                width: 100% !important; padding: 10px !important; margin-bottom: 12px !important; 
+                border-radius: 8px !important; border: 1px solid #ccc !important; background: #fff !important; color: #111 !important;
+            }
+            #bugcatcher-modal-actions { display: flex !important; justify-content: flex-end !important; gap: 8px !important; }
+            #bugcatcher-modal-actions button { 
+                padding: 10px 20px !important; border-radius: 6px !important; border: none !important; 
+                cursor: pointer !important; font-weight: bold !important;
+            }
+            .bc-btn-submit { background: #0070f3 !important; color: white !important; }
+            .bc-btn-cancel { background: #eee !important; color: #333 !important; }
         `;
         const styleSheet = document.createElement("style");
         styleSheet.innerText = styles;
@@ -137,15 +124,25 @@
         btn.innerText = devMode ? loc.btnDev : loc.btnClient;
         document.body.appendChild(btn);
 
+        const severityHtml = devMode ? `
+            <select id="bugcatcher-severity">
+                <option value="LOW">${loc.severity.low}</option>
+                <option value="MEDIUM" selected>${loc.severity.medium}</option>
+                <option value="HIGH">${loc.severity.high}</option>
+                <option value="CRITICAL">${loc.severity.critical}</option>
+            </select>
+        ` : '';
+
         const modalHtml = `
             <div id="bugcatcher-modal-overlay">
                 <div id="bugcatcher-modal">
-                    <h2>${loc.clientTitle}</h2>
-                    <p>${loc.clientSubtitle}</p>
-                    <textarea id="bugcatcher-description"></textarea>
+                    <h2>${devMode ? loc.devTitle : loc.title}</h2>
+                    <p>${devMode ? loc.devSubtitle : loc.subtitle}</p>
+                    <textarea id="bugcatcher-description" placeholder="${loc.placeholder}"></textarea>
+                    ${severityHtml}
                     <div id="bugcatcher-modal-actions">
                         <button class="bc-btn-cancel" id="bugcatcher-cancel">${loc.cancel}</button>
-                        <button class="bc-btn-submit" id="bugcatcher-submit">${devMode ? loc.submitDev : loc.submit}</button>
+                        <button class="bc-btn-submit" id="bugcatcher-submit">${loc.submit}</button>
                     </div>
                 </div>
             </div>
@@ -170,28 +167,12 @@
                 userAgent: navigator.userAgent,
                 timestamp: new Date().toISOString(),
                 recordingEvents: events,
-                assetPaths: screenshots.map((s, i) => `vision_${i}.jpg`), // Placeholder or actual if we had upload logic here
                 mode: devMode ? 'DEV' : 'CLIENT'
             };
 
-            // Re-upload logic simplified for this rewrite version
-            let finalAssetPaths = [];
-            if (screenshots.length > 0) {
-                try {
-                    const uploadRes = await fetch(`${window.__bc_baseUrl}/api/upload`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ images: screenshots })
-                    });
-                    if (uploadRes.ok) {
-                        const data = await uploadRes.json();
-                        finalAssetPaths = data.paths || [];
-                    }
-                } catch (e) { }
-            }
-            payload.assetPaths = finalAssetPaths;
-
             if (devMode) {
+                const sev = document.getElementById('bugcatcher-severity');
+                if (sev) payload.severity = sev.value;
                 payload.consoleErrors = consoleLogs;
                 payload.networkLog = networkLogs;
                 payload.jsErrors = jsErrors;
@@ -204,36 +185,15 @@
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    submitBtn.innerText = loc.uploaded;
+                    submitBtn.innerText = loc.sent;
                     sessionStorage.removeItem(STORAGE_KEY);
-                    sessionStorage.removeItem(SCREENSHOT_KEY);
-                    events = []; screenshots = [];
-                    setTimeout(() => { overlay.style.display = 'none'; btn.style.visibility = 'visible'; submitBtn.disabled = false; submitBtn.innerText = devMode ? loc.submitDev : loc.submit; }, 2000);
+                    events = [events[0], events[1]];
+                    setTimeout(() => { overlay.style.display = 'none'; btn.style.visibility = 'visible'; submitBtn.disabled = false; submitBtn.innerText = loc.submit; }, 2000);
                 } else {
-                    alert(loc.serverError.replace('{status}', res.status));
-                    submitBtn.disabled = false;
+                    submitBtn.disabled = false; submitBtn.innerText = loc.submit;
                 }
-            } catch (e) {
-                alert(loc.genericError);
-                submitBtn.disabled = false;
-            }
+            } catch (e) { submitBtn.disabled = false; submitBtn.innerText = loc.submit; }
         };
-    };
-
-    // 4. Vision and Recording logic
-    const captureFrame = async () => {
-        const now = Date.now();
-        if (now - lastScreenshotTime < 30000) return;
-        if (typeof html2canvas === 'undefined') return;
-
-        try {
-            const canvas = await html2canvas(document.body, { scale: 1, logging: false, useCORS: true });
-            const frame = canvas.toDataURL('image/jpeg', 0.3); // Lower quality to save space
-            screenshots.push(frame);
-            if (screenshots.length > 5) screenshots.shift();
-            lastScreenshotTime = Date.now();
-            debounceStorage(SCREENSHOT_KEY, screenshots);
-        } catch (e) { }
     };
 
     const tryStartRecording = () => {
@@ -241,29 +201,15 @@
         rrweb.record({
             emit(event) {
                 events.push(event);
-
-                // CRITICAL FIX: Preservation of snapshot chain
-                // We keep the first 2 events (Metadata + Initial FullSnapshot)
-                // And we use a manageable rotating buffer for the rest.
-                if (events.length > 1500) {
-                    // Try to keep the first 2 (Meta + Snapshot) and the last 1200
-                    events = [events[0], events[1], ...events.slice(-1200)];
-                }
-
+                if (events.length > 1500) { events = [events[0], events[1], ...events.slice(-1200)]; }
                 debounceStorage(STORAGE_KEY, events);
             },
-            checkoutEveryNms: 60000, // New snapshot every 60s for reliability
-            sampling: {
-                mousemoveInterval: 1200, // 1.2s for smoother but still efficient video
-                scroll: 1500,
-                input: 'last'
-            }
+            checkoutEveryNms: 60000,
+            sampling: { mousemoveInterval: 1200, scroll: 1500, input: 'last' }
         });
         isRecording = true;
-        console.log('BugCatcher: Recording active');
     };
 
-    // 5. Initialization Lifecycle
     const initWidget = async () => {
         try {
             let baseUrl = 'https://www.bugcatcher.app';
@@ -271,10 +217,9 @@
             if (scriptSrc && scriptSrc.includes('localhost')) baseUrl = new URL(scriptSrc).origin;
             window.__bc_baseUrl = baseUrl;
 
-            // Load storage
             try {
-                const s = sessionStorage.getItem(STORAGE_KEY); if (s) { events = JSON.parse(s); if (events.length > 0) console.log('BugCatcher: Resumed playback history'); }
-                const img = sessionStorage.getItem(SCREENSHOT_KEY); if (img) screenshots = JSON.parse(img);
+                const s = sessionStorage.getItem(STORAGE_KEY);
+                if (s) { events = JSON.parse(s); if (events.length > 5000) events = events.slice(-1000); }
             } catch (e) { }
 
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);
@@ -288,12 +233,12 @@
         if (devMode) enableDevInterceptors();
         createWidgetUI();
 
-        // Load assets
         const rScript = document.createElement('script'); rScript.src = 'https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb-all.min.js';
         rScript.onload = tryStartRecording; document.head.appendChild(rScript);
 
         const hScript = document.createElement('script'); hScript.src = 'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js';
-        hScript.onload = () => { captureFrame(); setInterval(captureFrame, 60000); }; document.head.appendChild(hScript);
+        hScript.onload = () => { if (typeof html2canvas !== 'undefined') { html2canvas(document.body, { scale: 0.5, logging: false, useCORS: true }).then(c => { screenshots = [c.toDataURL('image/jpeg', 0.2)]; }); } };
+        document.head.appendChild(hScript);
     };
 
     initWidget();
