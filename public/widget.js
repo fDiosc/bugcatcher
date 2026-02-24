@@ -34,14 +34,16 @@
     const enableDevInterceptors = () => {
         if (window.__bc_interceptors_active) return;
         window.__bc_interceptors_active = true;
-        console.log('BugCatcher: Dev Mode Active (Telemetry Enabled)');
+        console.log('BugCatcher: Dev Mode Active (Telemetry Interceptors Enabled)');
 
         const originalConsole = { log: console.log, warn: console.warn, error: console.error };
         const pushLog = (level, args) => {
             try {
-                const message = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+                const message = Array.from(args).map(a => {
+                    try { return typeof a === 'object' ? JSON.stringify(a) : String(a); } catch (e) { return '[Circular Object]'; }
+                }).join(' ');
                 consoleLogs.push({ level, message, timestamp: Date.now() });
-                if (consoleLogs.length > 100) consoleLogs.shift();
+                if (consoleLogs.length > 200) consoleLogs.shift();
             } catch (e) { }
         };
 
@@ -50,7 +52,12 @@
         console.error = function () { originalConsole.error.apply(console, arguments); pushLog('error', arguments); };
 
         window.addEventListener('error', (e) => {
-            jsErrors.push({ type: 'error', message: e.message, filename: e.filename, lineno: e.lineno, timestamp: Date.now() });
+            jsErrors.push({ type: 'error', message: e.message, filename: e.filename, lineno: e.lineno, timestamp: Date.now(), stack: e.error ? e.error.stack : null });
+            if (jsErrors.length > 50) jsErrors.shift();
+        });
+
+        window.addEventListener('unhandledrejection', (e) => {
+            jsErrors.push({ type: 'promise_reject', message: String(e.reason), timestamp: Date.now() });
         });
     };
 
@@ -58,7 +65,7 @@
         'en': {
             btnDev: '🐞 Report Bug (Dev)', btnClient: 'Report Bug',
             title: 'Report a Bug', subtitle: 'What happened?',
-            devTitle: '[Dev] Bug Report', devSubtitle: 'Telemetry will be attached.',
+            devTitle: '[Dev] Bug Report', devSubtitle: 'Session data and telemetry will be attached.',
             placeholder: 'Ex: I clicked Save and it crashed...',
             cancel: 'Cancel', submit: 'Submit', sending: 'Sending...', sent: 'Sent! 🎉',
             severity: { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' }
@@ -66,7 +73,7 @@
         'pt-br': {
             btnDev: '🐞 Reportar Bug (Dev)', btnClient: 'Reportar Erro',
             title: 'Reportar um Problema', subtitle: 'O que aconteceu?',
-            devTitle: '[Dev] Relato de Bug', devSubtitle: 'A telemetria será enviada.',
+            devTitle: '[Dev] Relato de Bug', devSubtitle: 'A telemetria da sessão será enviada.',
             placeholder: 'Ex: Cliquei em salvar e a tela travou...',
             cancel: 'Cancelar', submit: 'Enviar', sending: 'Enviando...', sent: 'Enviado! 🎉',
             severity: { low: 'Baixo', medium: 'Médio', high: 'Alto', critical: 'Crítico' }
@@ -80,40 +87,40 @@
         const styles = `
             #bugcatcher-widget-btn { 
                 position: fixed !important; bottom: 20px !important; right: 20px !important; 
-                background: #0070f3 !important; color: white !important; border: none !important; 
+                background: #0070f3 !important; color: #ffffff !important; border: none !important; 
                 border-radius: 50px !important; padding: 12px 24px !important; font-family: sans-serif !important; 
                 font-weight: bold !important; cursor: pointer !important; z-index: 2147483646 !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; display: block !important;
             }
             #bugcatcher-modal-overlay { 
-                display: none !important; position: fixed !important; top: 0 !important; left: 0 !important; 
-                width: 100% !important; height: 100% !important; background: rgba(0,0,0,0.6) !important; 
+                display: none; position: fixed !important; top: 0 !important; left: 0 !important; 
+                width: 100% !important; height: 100% !important; background: rgba(0,0,0,0.7) !important; 
                 z-index: 2147483647 !important; justify-content: center !important; align-items: center !important;
             }
             #bugcatcher-modal { 
                 background: #ffffff !important; color: #111111 !important; padding: 24px !important; 
-                border-radius: 12px !important; width: 90% !important; max-width: 400px !important; 
-                box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important; font-family: -apple-system, sans-serif !important;
+                border-radius: 12px !important; width: 90% !important; max-width: 420px !important; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important; font-family: -apple-system, system-ui, sans-serif !important;
                 text-align: left !important;
             }
-            #bugcatcher-modal h2 { margin: 0 0 8px 0 !important; color: #111 !important; font-size: 20px !important; font-weight: bold !important; }
-            #bugcatcher-modal p { margin: 0 0 16px 0 !important; color: #444 !important; font-size: 14px !important; }
+            #bugcatcher-modal h2 { margin: 0 0 8px 0 !important; color: #111 !important; font-size: 22px !important; font-weight: 800 !important; line-height: 1.2 !important; }
+            #bugcatcher-modal p { margin: 0 0 16px 0 !important; color: #555 !important; font-size: 14px !important; line-height: 1.4 !important; }
             #bugcatcher-modal textarea { 
-                width: 100% !important; height: 100px !important; margin: 12px 0 !important; padding: 12px !important; 
-                border: 1px solid #ccc !important; border-radius: 8px !important; box-sizing: border-box !important; 
-                resize: none !important; color: #111 !important; background: #fff !important; font-size: 14px !important;
+                width: 100% !important; height: 110px !important; margin: 12px 0 !important; padding: 12px !important; 
+                border: 1px solid #bbb !important; border-radius: 8px !important; box-sizing: border-box !important; 
+                resize: none !important; color: #111 !important; background: #fff !important; font-size: 15px !important;
             }
             #bugcatcher-modal select {
-                width: 100% !important; padding: 10px !important; margin-bottom: 12px !important; 
-                border-radius: 8px !important; border: 1px solid #ccc !important; background: #fff !important; color: #111 !important;
+                width: 100% !important; padding: 12px !important; margin-bottom: 20px !important; 
+                border-radius: 8px !important; border: 1px solid #bbb !important; background: #fff !important; color: #111 !important; font-size: 14px !important;
             }
-            #bugcatcher-modal-actions { display: flex !important; justify-content: flex-end !important; gap: 8px !important; }
+            #bugcatcher-modal-actions { display: flex !important; justify-content: flex-end !important; gap: 10px !important; }
             #bugcatcher-modal-actions button { 
-                padding: 10px 20px !important; border-radius: 6px !important; border: none !important; 
-                cursor: pointer !important; font-weight: bold !important;
+                padding: 12px 24px !important; border-radius: 8px !important; border: none !important; 
+                cursor: pointer !important; font-weight: bold !important; font-size: 14px !important;
             }
-            .bc-btn-submit { background: #0070f3 !important; color: white !important; }
-            .bc-btn-cancel { background: #eee !important; color: #333 !important; }
+            .bc-btn-submit { background: #0070f3 !important; color: #fff !important; }
+            .bc-btn-cancel { background: #f0f0f0 !important; color: #444 !important; }
         `;
         const styleSheet = document.createElement("style");
         styleSheet.innerText = styles;
@@ -133,7 +140,8 @@
             </select>
         ` : '';
 
-        const modalHtml = `
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = `
             <div id="bugcatcher-modal-overlay">
                 <div id="bugcatcher-modal">
                     <h2>${devMode ? loc.devTitle : loc.title}</h2>
@@ -147,13 +155,21 @@
                 </div>
             </div>
         `;
-        const div = document.createElement('div');
-        div.innerHTML = modalHtml;
-        document.body.appendChild(div);
+        document.body.appendChild(modalContainer);
 
         const overlay = document.getElementById('bugcatcher-modal-overlay');
-        btn.onclick = () => { overlay.style.display = 'flex'; btn.style.visibility = 'hidden'; };
-        document.getElementById('bugcatcher-cancel').onclick = () => { overlay.style.display = 'none'; btn.style.visibility = 'visible'; };
+        const descArea = document.getElementById('bugcatcher-description');
+
+        btn.onclick = () => {
+            overlay.style.setProperty('display', 'flex', 'important');
+            btn.style.setProperty('visibility', 'hidden', 'important');
+            descArea.focus();
+        };
+
+        document.getElementById('bugcatcher-cancel').onclick = () => {
+            overlay.style.setProperty('display', 'none', '');
+            btn.style.setProperty('visibility', 'visible', 'important');
+        };
 
         document.getElementById('bugcatcher-submit').onclick = async () => {
             const submitBtn = document.getElementById('bugcatcher-submit');
@@ -162,13 +178,29 @@
 
             const payload = {
                 projectKey,
-                description: document.getElementById('bugcatcher-description').value,
+                description: descArea.value,
                 url: window.location.href,
                 userAgent: navigator.userAgent,
                 timestamp: new Date().toISOString(),
                 recordingEvents: events,
                 mode: devMode ? 'DEV' : 'CLIENT'
             };
+
+            let finalAssetPaths = [];
+            if (screenshots.length > 0) {
+                try {
+                    const uploadRes = await fetch(`${window.__bc_baseUrl}/api/upload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ images: screenshots })
+                    });
+                    if (uploadRes.ok) {
+                        const data = await uploadRes.json();
+                        finalAssetPaths = data.paths || [];
+                    }
+                } catch (e) { }
+            }
+            payload.assetPaths = finalAssetPaths;
 
             if (devMode) {
                 const sev = document.getElementById('bugcatcher-severity');
@@ -187,9 +219,16 @@
                 if (res.ok) {
                     submitBtn.innerText = loc.sent;
                     sessionStorage.removeItem(STORAGE_KEY);
-                    events = [events[0], events[1]];
-                    setTimeout(() => { overlay.style.display = 'none'; btn.style.visibility = 'visible'; submitBtn.disabled = false; submitBtn.innerText = loc.submit; }, 2000);
+                    events = [events[0], events[1]]; // Reset to base state
+                    setTimeout(() => {
+                        overlay.style.setProperty('display', 'none', '');
+                        btn.style.setProperty('visibility', 'visible', 'important');
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = loc.submit;
+                        descArea.value = '';
+                    }, 2000);
                 } else {
+                    alert('Error: ' + res.status);
                     submitBtn.disabled = false; submitBtn.innerText = loc.submit;
                 }
             } catch (e) { submitBtn.disabled = false; submitBtn.innerText = loc.submit; }
@@ -201,7 +240,7 @@
         rrweb.record({
             emit(event) {
                 events.push(event);
-                if (events.length > 1500) { events = [events[0], events[1], ...events.slice(-1200)]; }
+                if (events.length > 2000) { events = [events[0], events[1], ...events.slice(-1500)]; }
                 debounceStorage(STORAGE_KEY, events);
             },
             checkoutEveryNms: 60000,
@@ -219,7 +258,7 @@
 
             try {
                 const s = sessionStorage.getItem(STORAGE_KEY);
-                if (s) { events = JSON.parse(s); if (events.length > 5000) events = events.slice(-1000); }
+                if (s) { events = JSON.parse(s); }
             } catch (e) { }
 
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);
@@ -227,6 +266,7 @@
                 const config = await res.json();
                 devMode = config.mode === 'DEV';
                 language = config.language || 'en';
+                console.log(`BugCatcher: Config synced (${devMode ? 'DEV' : 'CLIENT'} mode)`);
             }
         } catch (e) { console.warn('BugCatcher: Sync offline'); }
 
@@ -237,7 +277,15 @@
         rScript.onload = tryStartRecording; document.head.appendChild(rScript);
 
         const hScript = document.createElement('script'); hScript.src = 'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js';
-        hScript.onload = () => { if (typeof html2canvas !== 'undefined') { html2canvas(document.body, { scale: 0.5, logging: false, useCORS: true }).then(c => { screenshots = [c.toDataURL('image/jpeg', 0.2)]; }); } };
+        hScript.onload = () => {
+            setTimeout(() => {
+                if (typeof html2canvas !== 'undefined') {
+                    html2canvas(document.body, { scale: 0.5, logging: false, useCORS: true }).then(c => {
+                        screenshots = [c.toDataURL('image/jpeg', 0.25)];
+                    });
+                }
+            }, 5000);
+        };
         document.head.appendChild(hScript);
     };
 
