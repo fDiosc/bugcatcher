@@ -32,7 +32,16 @@
         window[timerKey] = setTimeout(() => {
             try {
                 sessionStorage.setItem(key, JSON.stringify(data));
-            } catch (e) { /* ignore quota errors */ }
+            } catch (e) {
+                // Handle quota errors by aggressively trimming old data
+                if (e.name === 'QuotaExceededError') {
+                    console.warn('BugCatcher: Storage full, trimming old history');
+                    if (key === STORAGE_KEY && data.length > 500) {
+                        const trimmed = [data[0], data[1], ...data.slice(-250)];
+                        sessionStorage.setItem(key, JSON.stringify(trimmed));
+                    }
+                }
+            }
         }, delay);
     };
 
@@ -44,7 +53,6 @@
     const enableDevInterceptors = () => {
         if (window.__bc_interceptors_active) return;
         window.__bc_interceptors_active = true;
-        console.log('BugCatcher: Dev Mode Enabled - Intercepting Telemetry');
 
         const originalConsole = { log: console.log, warn: console.warn, error: console.error };
         const pushLog = (level, args) => {
@@ -54,7 +62,7 @@
                     return typeof a === 'object' ? JSON.stringify(a) : String(a);
                 }).join(' ');
                 consoleLogs.push({ level, message, timestamp: Date.now() });
-                if (consoleLogs.length > 60) consoleLogs.shift();
+                if (consoleLogs.length > 100) consoleLogs.shift();
             } catch (e) { }
         };
 
@@ -71,13 +79,13 @@
             jsErrors.push({ type: 'error', message: event.message, filename: event.filename, lineno: event.lineno, error: event.error ? event.error.stack : null, timestamp: Date.now() });
         }, true);
 
-        // Fetch/XHR Interceptors...
         const originalFetch = window.fetch;
         window.fetch = async function (...args) {
             const start = Date.now();
             try {
                 const res = await originalFetch.apply(this, args);
-                if (!res.ok || res.status >= 400) {
+                // Log failed or slow requests
+                if (!res.ok || res.status >= 400 || (Date.now() - start > 2000)) {
                     networkLogs.push({ type: 'fetch', url: args[0].url || args[0], status: res.status, duration: Date.now() - start, timestamp: start });
                 }
                 return res;
@@ -94,17 +102,15 @@
             btnDev: '🐞 Report Bug (Dev)', btnClient: 'Report Bug',
             clientTitle: 'Oops! Did something go wrong?', clientSubtitle: 'What were you trying to do?',
             cancel: 'Cancel', submit: 'Submit Feedback', submitDev: 'Submit',
-            sending: 'Sending...', uploaded: 'Sent! 🎉',
-            serverError: 'Failed (Status: {status})', timeoutError: 'Timed out',
-            genericError: 'An error occurred'
+            sending: 'Sending...', uploaded: 'Sent! 🎉', serverError: 'Retry later ({status})',
+            genericError: 'Error occurred'
         },
         'pt-br': {
             btnDev: '🐞 Reportar Bug (Dev)', btnClient: 'Reportar Erro',
             clientTitle: 'Ops! Ocorreu um problema?', clientSubtitle: 'O que você tentava fazer?',
             cancel: 'Cancelar', submit: 'Enviar Feedback', submitDev: 'Enviar',
-            sending: 'Enviando...', uploaded: 'Enviado! 🎉',
-            serverError: 'Falha (Erro: {status})', timeoutError: 'Tempo esgotado',
-            genericError: 'Ocorreu um erro'
+            sending: 'Enviando...', uploaded: 'Enviado! 🎉', serverError: 'Tente novamente ({status})',
+            genericError: 'Erro inesperado'
         }
     };
 
@@ -116,7 +122,7 @@
             #bugcatcher-widget-btn { position: fixed; bottom: 20px; right: 20px; background: #0070f3; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-family: sans-serif; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999999; }
             #bugcatcher-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999999; justify-content: center; align-items: center; }
             #bugcatcher-modal { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: sans-serif; }
-            #bugcatcher-modal textarea { width: 100%; height: 100px; margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; resize: none; }
+            #bugcatcher-modal textarea { width: 100%; height: 100px; margin: 12px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; resize: none; font-family: inherit; }
             #bugcatcher-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
             #bugcatcher-modal-actions button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; }
             .bc-btn-submit { background: #0070f3; color: white; }
@@ -164,8 +170,26 @@
                 userAgent: navigator.userAgent,
                 timestamp: new Date().toISOString(),
                 recordingEvents: events,
+                assetPaths: screenshots.map((s, i) => `vision_${i}.jpg`), // Placeholder or actual if we had upload logic here
                 mode: devMode ? 'DEV' : 'CLIENT'
             };
+
+            // Re-upload logic simplified for this rewrite version
+            let finalAssetPaths = [];
+            if (screenshots.length > 0) {
+                try {
+                    const uploadRes = await fetch(`${window.__bc_baseUrl}/api/upload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ images: screenshots })
+                    });
+                    if (uploadRes.ok) {
+                        const data = await uploadRes.json();
+                        finalAssetPaths = data.paths || [];
+                    }
+                } catch (e) { }
+            }
+            payload.assetPaths = finalAssetPaths;
 
             if (devMode) {
                 payload.consoleErrors = consoleLogs;
@@ -181,12 +205,10 @@
                 });
                 if (res.ok) {
                     submitBtn.innerText = loc.uploaded;
-                    setTimeout(() => {
-                        overlay.style.display = 'none';
-                        btn.style.visibility = 'visible';
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = devMode ? loc.submitDev : loc.submit;
-                    }, 2000);
+                    sessionStorage.removeItem(STORAGE_KEY);
+                    sessionStorage.removeItem(SCREENSHOT_KEY);
+                    events = []; screenshots = [];
+                    setTimeout(() => { overlay.style.display = 'none'; btn.style.visibility = 'visible'; submitBtn.disabled = false; submitBtn.innerText = devMode ? loc.submitDev : loc.submit; }, 2000);
                 } else {
                     alert(loc.serverError.replace('{status}', res.status));
                     submitBtn.disabled = false;
@@ -206,7 +228,7 @@
 
         try {
             const canvas = await html2canvas(document.body, { scale: 1, logging: false, useCORS: true });
-            const frame = canvas.toDataURL('image/jpeg', 0.4);
+            const frame = canvas.toDataURL('image/jpeg', 0.3); // Lower quality to save space
             screenshots.push(frame);
             if (screenshots.length > 5) screenshots.shift();
             lastScreenshotTime = Date.now();
@@ -219,12 +241,26 @@
         rrweb.record({
             emit(event) {
                 events.push(event);
-                if (events.length > 1000) events.shift();
+
+                // CRITICAL FIX: Preservation of snapshot chain
+                // We keep the first 2 events (Metadata + Initial FullSnapshot)
+                // And we use a manageable rotating buffer for the rest.
+                if (events.length > 1500) {
+                    // Try to keep the first 2 (Meta + Snapshot) and the last 1200
+                    events = [events[0], events[1], ...events.slice(-1200)];
+                }
+
                 debounceStorage(STORAGE_KEY, events);
             },
-            sampling: { mousemoveInterval: 3000, scroll: 2000 }
+            checkoutEveryNms: 60000, // New snapshot every 60s for reliability
+            sampling: {
+                mousemoveInterval: 1200, // 1.2s for smoother but still efficient video
+                scroll: 1500,
+                input: 'last'
+            }
         });
         isRecording = true;
+        console.log('BugCatcher: Recording active');
     };
 
     // 5. Initialization Lifecycle
@@ -234,6 +270,12 @@
             const scriptSrc = script.src;
             if (scriptSrc && scriptSrc.includes('localhost')) baseUrl = new URL(scriptSrc).origin;
             window.__bc_baseUrl = baseUrl;
+
+            // Load storage
+            try {
+                const s = sessionStorage.getItem(STORAGE_KEY); if (s) { events = JSON.parse(s); if (events.length > 0) console.log('BugCatcher: Resumed playback history'); }
+                const img = sessionStorage.getItem(SCREENSHOT_KEY); if (img) screenshots = JSON.parse(img);
+            } catch (e) { }
 
             const res = await fetch(`${baseUrl}/api/project?key=${projectKey}`);
             if (res.ok) {
@@ -251,7 +293,7 @@
         rScript.onload = tryStartRecording; document.head.appendChild(rScript);
 
         const hScript = document.createElement('script'); hScript.src = 'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js';
-        hScript.onload = captureFrame; document.head.appendChild(hScript);
+        hScript.onload = () => { captureFrame(); setInterval(captureFrame, 60000); }; document.head.appendChild(hScript);
     };
 
     initWidget();
