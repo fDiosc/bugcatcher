@@ -199,9 +199,10 @@ export default function ProjectTabs({ project }: { project: Project }) {
                                 <span className="bg-blue-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Recommended</span>
                                 Option 1: Automagic CLI 🪄
                             </p>
-                            <p className="text-sm text-slate-400 mb-2">Run this from your project root. It will ask for your API key and auto-inject the component into your layout.</p>
-                            <div className="bg-[#0d1117] border border-slate-800/60 rounded-xl p-4 font-mono text-sm text-green-400 overflow-x-auto shadow-inner">
-                                <pre>{`npx bugcatcher-init`}</pre>
+                            <p className="text-sm text-slate-400 mb-2">Run this from your project root. It will check for dependencies and auto-inject the component into your layout.</p>
+                            <div className="bg-[#0d1117] border border-slate-800/60 rounded-xl p-4 font-mono text-sm text-green-400 overflow-x-auto shadow-inner space-y-2">
+                                <div className="text-blue-300">npm install @bugcatcher/react</div>
+                                <div className="text-green-400">{`npx bugcatcher-init`}</div>
                             </div>
                         </div>
 

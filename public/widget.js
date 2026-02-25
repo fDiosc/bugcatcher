@@ -240,7 +240,11 @@
         rrweb.record({
             emit(event) {
                 events.push(event);
-                if (events.length > 2000) { events = [events[0], events[1], ...events.slice(-1500)]; }
+                // STRICT TRUNCATION: Limit to ~150 events (approx 2 mins action)
+                // We keep events[0] (Meta) and events[1] (FullSnapshot) to ensure playback starts
+                if (events.length > 150) {
+                    events = [events[0], events[1], ...events.slice(-148)];
+                }
                 debounceStorage(STORAGE_KEY, events);
             },
             checkoutEveryNms: 60000,

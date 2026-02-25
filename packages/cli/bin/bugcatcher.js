@@ -19,7 +19,25 @@ async function main() {
 
     console.log('\nScanning project...');
 
-    // Very simplified heuristics to find a Next.js App Router root layout
+    // 1. Dependency Check
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    if (!fs.existsSync(pkgPath)) {
+        console.log('\x1b[31m%s\x1b[0m', '\nCould not find package.json. Please run this inside your project root.');
+        process.exit(1);
+    }
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const hasDep = (pkg.dependencies && pkg.dependencies['@bugcatcher/react']) ||
+        (pkg.devDependencies && pkg.devDependencies['@bugcatcher/react']);
+
+    if (!hasDep) {
+        console.log('\x1b[33m%s\x1b[0m', '\n@bugcatcher/react is not installed.');
+        console.log('Please run the following command first:\n');
+        console.log('\x1b[36m%s\x1b[0m', 'npm install @bugcatcher/react\n');
+        console.log('After installing, run npx bugcatcher-init again.');
+        process.exit(0);
+    }
+
+    // 2. Layout Discovery
     const possiblePaths = [
         path.join(process.cwd(), 'src', 'app', 'layout.tsx'),
         path.join(process.cwd(), 'app', 'layout.tsx'),
