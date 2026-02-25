@@ -171,7 +171,7 @@ const HLINES = [
   { c: '', t: '' },
   { c: '#666', t: '? Paste your Project API Key: ', sfx: 'bc_live_x9k2...m7p', sc: '#a78bfa' },
   { c: '', t: '' },
-  { c: '#22c55e', t: '✓  Project validated  →  AgroMonitor (prod)' },
+  { c: '#22c55e', t: '✓  Project validated  →  Your App (prod)' },
   { c: '#22c55e', t: '✓  Widget injected    →  public/bugcatcher.js' },
   { c: '#22c55e', t: '✓  Layout patched     →  app/layout.tsx' },
   { c: '#22c55e', t: '✓  .env updated       →  BUGCATCHER_KEY' },
@@ -231,7 +231,7 @@ const ISTEPS = [
       { c: '#666', t: '? API Key: bc_live_x9k2...m7p ✓' },
       { c: '', t: '' },
       { c: '#22c55e', t: '✓  Connecting...' },
-      { c: '#22c55e', t: '✓  Project: AgroMonitor (prod)' },
+      { c: '#22c55e', t: '✓  Project: Your App (prod)' },
       { c: '#22c55e', t: '✓  Permissions validated' },
     ]
   },

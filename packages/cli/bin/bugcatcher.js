@@ -8,17 +8,6 @@ const path = require('path');
 async function main() {
     console.log('\x1b[34m%s\x1b[0m', '\nWelcome to BugCatcher! 🐛\n');
 
-    const { apiKey } = await inquirer.prompt([
-        {
-            type: 'input',
-            name: 'apiKey',
-            message: 'Enter your BugCatcher API Key (e.g. bc_12345):',
-            validate: input => input.length > 5 ? true : 'Please enter a valid API Key',
-        }
-    ]);
-
-    console.log('\nScanning project...');
-
     // 1. Dependency Check
     const pkgPath = path.join(process.cwd(), 'package.json');
     if (!fs.existsSync(pkgPath)) {
@@ -36,6 +25,17 @@ async function main() {
         console.log('After installing, run npx bugcatcher-init again.');
         process.exit(0);
     }
+
+    const { apiKey } = await inquirer.prompt([
+        {
+            type: 'input',
+            name: 'apiKey',
+            message: 'Enter your BugCatcher API Key (e.g. bc_12345):',
+            validate: input => input.length > 5 ? true : 'Please enter a valid API Key',
+        }
+    ]);
+
+    console.log('\nScanning project...');
 
     // 2. Layout Discovery
     const possiblePaths = [
