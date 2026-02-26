@@ -237,17 +237,42 @@
 
     const tryStartRecording = () => {
         if (isRecording || typeof rrweb === 'undefined') return;
+
+        // Ensure we have the base Meta event if resuming from storage
+        // Type 0 = Meta
+        if (events.length > 0 && events[0].type !== 0) {
+            events = []; // Metadata lost, safer to restart
+        }
+
         rrweb.record({
             emit(event) {
                 events.push(event);
-                // STRICT TRUNCATION: Limit to ~150 events (approx 2 mins action)
-                // We keep events[0] (Meta) and events[1] (FullSnapshot) to ensure playback starts
-                if (events.length > 150) {
-                    events = [events[0], events[1], ...events.slice(-148)];
+
+                // TIME-BASED SLIDING WINDOW (Segment-based)
+                // We want ~60-90 seconds of buffer.
+                // We use checkoutEveryNms: 30000 to get a FullSnapshot every 30s.
+                // Strategy: Keep 2 to 3 "segments" of 30s.
+
+                // Type 2 = FullSnapshot, Type 0 = Meta
+                const snapshots = events.filter(e => e.type === 2);
+
+                if (snapshots.length > 3) {
+                    // Find index of the second FullSnapshot
+                    const secondSnapshotIndex = events.findIndex(e => e === snapshots[1]);
+                    if (secondSnapshotIndex !== -1) {
+                        // Keep Meta event (events[0]) + from second snapshot onwards
+                        events = [events[0], ...events.slice(secondSnapshotIndex)];
+                    }
                 }
+
+                // Safety cap to prevent memory bloat in extreme cases
+                if (events.length > 1000) {
+                    events = [events[0], ...events.slice(-999)];
+                }
+
                 debounceStorage(STORAGE_KEY, events);
             },
-            checkoutEveryNms: 60000,
+            checkoutEveryNms: 30000, // New snapshot every 30s
             sampling: { mousemoveInterval: 1200, scroll: 1500, input: 'last' }
         });
         isRecording = true;
